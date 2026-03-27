@@ -2,7 +2,7 @@
 
 int main(void)
 {
-    printf("hola txikis");
-    printf("hola txikis");
-    printf("hola txikis");
+    printf("hola txikis\n");
+    printf("hola txikis\n");
+    printf("hola txikis\n");
 }
