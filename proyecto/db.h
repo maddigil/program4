@@ -18,7 +18,7 @@ typedef struct
     int ubicacion_estacion; // es el ID
     float bateria_restante;
 
-} Vehiculo;
+} Vehiculo;// prueba
 
 typedef struct
 {
