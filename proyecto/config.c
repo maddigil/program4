@@ -22,7 +22,7 @@ int config_cargar(const char *ruta, Config *cfg){
     strcpy(cfg->admin_usuario, "admin");
     strcpy(cfg->admin_clave, "admin123");
     strcpy(cfg->db_path, "gipuzkoa.db");
-    strcpy(cfg->estaciones_csv, "estaciones.csv"):
+    strcpy(cfg->estaciones_csv, "estaciones.csv");
     strcpy(cfg->usuarios_csv, "usuarios.csv");
     strcpy(cfg->vehiculos_csv, "vehiculos.csv");
 
