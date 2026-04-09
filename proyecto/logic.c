@@ -92,3 +92,84 @@ int logic_registrar_averia(sqlite3 *db, const Config * cfg){
     printf("  ERROR al registrar la averia.\n");
     return 0;
 }
+
+
+int logic_cambiar_estado_vehiculo(sqlite3 *db, const Config * cfg){
+    printf("\n  +----------------------------------+\n");
+    printf(  "  |   CAMBIAR ESTADO DE VEHICULO     |\n");
+    printf(  "  +----------------------------------+\n");
+
+    int id= leer_entero("  ID del vehiculo: ", 1,9999);
+    Vehiculo v;
+    if(!db_buscar_vehiculo(db, id,&v)){
+        printf("  ERROR: Vehiculo %d no encontrado \n", id);
+        return 0;
+    }
+    printf(" Estado actual: %s | Bateria: %1f%%\n", v.estado, v.bateria_restante);
+
+    printf(" Nuevo estado: \n");
+    printf(" 1. disponible\n  2. en uso\n 3. averiado\n");
+    int opcion = leer_entero(" Selecciona (1-3): ", 1,3);
+    const char *estados[] = {"disponible", "en uso", "averiado"};
+
+    if(db_actualizar_estado_vehiculo(db, id, estados[opcion-1])){
+        printf("  Estado actualizado a '%s'.\n", estados[opcion-1]);
+        char msg[256];
+        snprintf(msg,sizeof(msg), "Vehiculo %d estado cambiado a %s", id, estados[opcion-1]);
+        log_escribir(cfg,msg);
+        return 1;
+    }
+    printf(" ERROR al actualizar el estado del vehiculo,\n");
+    return 0;
+}
+
+int logic_cambiar_contrasena_usuario(sqlite3 *db){
+    printf("\n  +----------------------------------+\n");
+    printf(  "  |   CAMBIAR CONTRASENA USUARIO     |\n");
+    printf(  "  +----------------------------------+\n");
+
+    int id= leer_entero("  ID del usuario: ", 1,9999);
+    
+    Usuario u;
+    if(!db_buscar_usuario_id(db, id,&u)){
+        printf("  ERROR: Usuario %d no encontrado \n", id);
+        return 0;
+    }
+    printf(" Usuario: %s\n", u.nombre);
+
+    char nueva[MAX_STR];
+    leer_cadena(" Nueva contrasena: ", nueva, MAX_STR-1);
+
+    if(strlen(nueva <1)){
+        printf(" Contrasena vacia, operacion cancelada.\n");
+        return 0 ;
+    }
+    if(db_cambiar_contrasenya(db, id, nueva)){
+        printf("  Contrasena actualizada correctamente.\n");
+        return 1;
+    }
+    printf(" ERROR al actualizar contrasena.\n");
+    return 0;
+}
+
+
+void logic_mostrar_log(const Config *cfg){
+    FILE *f = fopen(cfg-> log_path,"r");
+    if(!f){
+        printf(" (El fichero del log esta vacio o no existe aun)\n");
+        return;
+    }
+    printf("\n === CONTENIDO DEL LOG (%s) ===\n\n", cfg->log_path);
+    char linea[512];
+    int n =0;
+    while(fgets(linea,sizeof(linea),f)){
+        printf(" %s", linea);
+        n++;
+    }
+    fclose(f);
+    if(!n){
+        printf(" (log vacio)\n");
+    }
+    printf("\n Total: %d entradas.\n", n);
+
+}
