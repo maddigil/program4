@@ -4,14 +4,14 @@
 #include <stdlib.h>
 
 
-sqlite3 *abrir_baseDatos(char *ruta){
+sqlite3* abrir_baseDatos(const char *ruta){/*uso de const porque no se modifica, solo se lee la ruta*/
     sqlite3 *db;
     if (sqlite3_open(ruta, &db) != SQLITE_OK)
     { // esto va a abrir el fichero y si no existe lo crea
         printf("Ha habido un error al abrirlo '%s': %s\n", ruta);
         return NULL;
     }
-    return db;
+    return db; /*la función devuelve un puntero*/
 }
 void cerrar_baseDatos(sqlite3 *db){
     sqlite3_close(db);
@@ -70,14 +70,14 @@ int crearTablas(sqlite3 *db)
         ");";
 
 
-    if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK)//v esto es que no ha habido error
+    if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK)//verificar que no ha habido error
     {
         printf("Ha habido un error creando tablas\n");
         return 0;
     }
     return 1;
 }
-static void limpiarCsv(char *string){
+/*static void limpiarCsv(char *string){
     for(int i=0;string[i] != '\0';i++){
         if(string[i]=='\r'|| string[i]=='\n'){
             string[i]='\0';
@@ -90,7 +90,7 @@ static char *SaltarBom(char *texto){
         return texto + 3; // saltar los 3 bytes del BOM
     }
     return texto; // si no hay BOM te da el string como esta
-}
+}*/
 int cargar_estaciones(sqlite3 *db, const char *csv){
     FILE *fd=fopen(csv,"r");
     if(fd==NULL){

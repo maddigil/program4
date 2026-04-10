@@ -62,12 +62,12 @@ typedef struct
 
 } Reserva;
 
-sqlite3 *db_abrir(const char *ruta); // para abrir o crear el fichero
-void db_cerrar(sqlite3 *db);
-int db_crear_tablas(sqlite3 *db);
+sqlite3* abrir_baseDatos(const char *ruta); // para abrir o crear el fichero
+void cerrar_baseDatos(sqlite3 *db);
+int crearTablas(sqlite3 *db);
 
-// carga de scv
-int db_cargar_estaciones(sqlite3 *db, char *scv);
+// carga de csv
+int cargar_estaciones(sqlite3 *db, char *scv);
 int db_cargar_usuarios(sqlite3 *db, char *scv);
 int db_cargar_vehiculos(sqlite3 *db, char *scv);
 
