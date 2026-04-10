@@ -307,7 +307,7 @@ int buscar_vehiculo(sqlite3 *db, int id, Vehiculo *resultado){
 
         resultado->id_vehiculo = id_v; //esto es que si lo ha encontrado que lo asigna
         resultado->ubicacion_estacion = id_est;
-        resultado->bateria = bat;
+        resultado->bateria_restante = bat;
 
 
         strcpy(resultado->estado, est);
@@ -414,7 +414,7 @@ int poner_averia(sqlite3 *db, const Averia *a){
     sqlite3_bind_int(stmt, 2, a->id_estacion);
     sqlite3_bind_text(stmt, 3, a->tipo, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 4, a->descripcion, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 5, a->fecha_reporte, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, a->fecha, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 6, a->estado, -1, SQLITE_STATIC);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -488,7 +488,7 @@ int insertar_reserva(sqlite3 *db, const Reserva *r){
     sqlite3_bind_int(stmt, 1, r->usuario_id);
     sqlite3_bind_int(stmt, 2, r->vehiculo_id);
     sqlite3_bind_text(stmt, 3, r->hora_inicio, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, r->hora_fin, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, r->hora_final, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 5, r->estado, -1, SQLITE_STATIC);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
