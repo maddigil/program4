@@ -59,7 +59,7 @@ static void menu_vehiculos(sqlite3 *db, const Config *cfg){
                 db_actualizar_autonomia(db, id, (float)nueva);
                 printf("Autonomia actualizada \n");
                 char msg[128];
-                snprintf(msg, sizeof(mgs), "VEHICULO %i autonomia actualizada a %d\n", id, nueva);
+                snprintf(msg, sizeof(msg), "VEHICULO %i autonomia actualizada a %d\n", id, nueva);
                 log_escribir(cfg, msg);
             }else{
                 prinft("vehiculo no encontrado\n");
@@ -127,7 +127,7 @@ static void menu_averias(sqlite3 *db, const Config *cfg){
                 snprintf(msg, sizeof(msg), "AVERIA %i marcada como reparada\n", id);
                 log_escribir(cfg, msg);
             } else{
-                printf("No se encontro la averia o ya estaba reparada\n")
+                printf("No se encontro la averia o ya estaba reparada\n");
             }
         }
         
