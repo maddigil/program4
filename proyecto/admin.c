@@ -54,7 +54,7 @@ static void menu_vehiculos(sqlite3 *db, const Config *cfg){
             int id =leer_entero(" ID del vehiculo: ", 1, 9999);
             Vehiculo v;
             if(db_buscar_vehiculo(db, id, &v)){
-                printf("Autonomía actual: %.1f%%\n", v.autonomia);
+                printf("Autonomía actual: %.1f%%\n", v.bateria_restante);
                 int nueva=leer_entero(" Nueva autonomia(0-100): ", 0, 100);
                 db_actualizar_autonomia(db, id, (float)nueva);
                 printf("Autonomia actualizada \n");

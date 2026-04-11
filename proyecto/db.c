@@ -77,14 +77,14 @@ int crearTablas(sqlite3 *db)
     }
     return 1;
 }
-/*static void limpiarCsv(char *string){
+static void limpiarCsv(char *string){
     for(int i=0;string[i] != '\0';i++){
         if(string[i]=='\r'|| string[i]=='\n'){
             string[i]='\0';
         }
     }
 }
-static char *SaltarBom(char *texto){
+/*static char *SaltarBom(char *texto){
     if (texto[0] == 0xEF && texto[1] == 0xBB && texto[2] == 0xBF)
     {
         return texto + 3; // saltar los 3 bytes del BOM
@@ -94,32 +94,44 @@ static char *SaltarBom(char *texto){
 int cargar_estaciones(sqlite3 *db, const char *csv){
     FILE *fd=fopen(csv,"r");
     if(fd==NULL){
+        //si la apertura del archivo falla:
+        //se muestra el erro y termina el programa
         perror("Error");
         exit(1);
     }
+    //guarda cada linea del csv
     char linea[256];
+    //prepara la consulta sql
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db, "INSERT INTO Estacion VALUES(?,?,?,?);", -1, &stmt,NULL);
+    //cuenta cuentas estaciones cargas
     int contador=0;
+    //lee una linea del csv y la guarda en linea[256]
     while(fgets(linea, sizeof(linea), fd)){
+        //elimina espacios o carácteres innecesarios
         limpiarCsv(linea);
+        //se guardan los campos del csv
         int id;
         int plazas;
         char nombre[100];
         char abrev[20];
+        //separa la linea csv
         sscanf(linea, "%d,%s,%s,%d\n", &id, nombre, abrev, &plazas);
-        sqlite3_bind_int(stmt, 1, id);
+            //reemplaza los ? por la variable leida
+            sqlite3_bind_int(stmt, 1, id);
             sqlite3_bind_text(stmt, 2, nombre, -1, SQLITE_TRANSIENT);
             sqlite3_bind_text(stmt, 3, abrev, -1, SQLITE_TRANSIENT);
             sqlite3_bind_int(stmt, 4, plazas);
-
-
+            //ejecuta el insert en la bd
             sqlite3_step(stmt);
+            //limpia la consulta para poder usarla luego
             sqlite3_reset(stmt);
+            //cuenta cada vehículo que se carga
             contador++;
 
 
     }
+    //libera la consulta
     sqlite3_finalize(stmt);
     fclose(fd);
     printf("Se han cargado %d estaciones.",contador);
@@ -157,6 +169,7 @@ int cargar_usuarios(sqlite3 *db, const char *csv){
     printf("Se han cargado %d usuarios.",contador);
     return contador;
 }
+
 int cargar_vehiculos(sqlite3 *db, const char *csv){
     FILE *fd=fopen(csv,"r");
     if(fd==NULL){
@@ -193,20 +206,26 @@ int cargar_vehiculos(sqlite3 *db, const char *csv){
     printf("Se han cargado %d vehiculos.",contador);
     return contador;
 }
+
+//para mostrar estaciones
 int listar_estaciones(sqlite3 *db){
     sqlite3_stmt *stmt;
     int contador = 0;
+    //prepara la consulta sql
     sqlite3_prepare_v2(db, "SELECT id_estacion, abreviacion, nombre,plazas FROM Estacion;", -1, &stmt, NULL);
    
+
     while (sqlite3_step(stmt) == SQLITE_ROW)
     {
+        //lee columnas de la fila
         int id = sqlite3_column_int(stmt, 0);
         const unsigned char *abrev =sqlite3_column_text(stmt, 1);
         const unsigned char *nom = sqlite3_column_text(stmt, 2);
         int plazas = sqlite3_column_int(stmt, 3);
 
-
+        //imprime los datos leídos
         printf("%d %s %s %d\n", id, abrev, nom, plazas);
+       //cuenta cantidad de vehiculos que ya has impreso datos
         contador++;
     }
     sqlite3_finalize(stmt);
@@ -318,6 +337,8 @@ int buscar_vehiculo(sqlite3 *db, int id, Vehiculo *resultado){
     sqlite3_finalize(stmt);
     return encontrado;
 }
+
+
 int buscar_usuario_por_id(sqlite3 *db, int id, Usuario *resultado){
     sqlite3_stmt *stmt;
     int encontrado = 0;
@@ -528,4 +549,100 @@ int listar_trayectosUsuario(sqlite3 *db, int id_usuario){
     sqlite3_finalize(stmt);
     printf("%d trayectos encontrados(si es 0 es que no hay trayectos registrados)\n", contador);
     return contador;
+}
+
+void db_estadisticas(sqlite3 *db) {
+    sqlite3_stmt *s;
+    int n;
+
+    printf("\n  +==============================+\n");
+    printf(  "  |   ESTADISTICAS DEL SISTEMA   |\n");
+    printf(  "  +==============================+\n\n");
+
+    //total usuarios registrados
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Usuario;",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("  Usuarios registrados : %d\n", n);
+
+    //total de vehiculos
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Vehiculo;",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("  Vehiculos totales    : %d\n", n);
+
+    //clasificamos vehiculos por estado
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Vehiculo WHERE estado='disponible';",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("    - Disponibles      : %d\n", n);
+
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Vehiculo WHERE estado='en_uso';",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("    - En uso           : %d\n", n);
+
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Vehiculo WHERE estado='averiado';",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("    - Averiados        : %d\n", n);
+
+    //averias pendientes
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Averia WHERE estado='pendiente';",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("  Averias pendientes   : %d\n", n);
+
+    //reservas activas
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Reserva WHERE estado='activa';",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("  Reservas activas     : %d\n", n);
+
+    //total trayectos
+    sqlite3_prepare_v2(db,"SELECT COUNT(*) FROM Trayecto;",-1,&s,NULL);
+    n = 0;
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        n = sqlite3_column_int(s, 0);
+    }
+    sqlite3_finalize(s);
+    printf("  Trayectos realizados : %d\n", n);
+
+    //estacion con mas vehiculos disponibles actualmente
+    sqlite3_prepare_v2(db,
+        "SELECT e.nombre, COUNT(*) as c FROM Vehiculo v "
+        "JOIN Estacion e ON v.ubicacion_estacion=e.id_estacion "
+        "WHERE v.estado='disponible' GROUP BY v.ubicacion_estacion "
+        "ORDER BY c DESC LIMIT 1;", -1, &s, NULL);
+
+    if(sqlite3_step(s) == SQLITE_ROW) {
+        printf("  Estacion con mas disponibles: %s (%d)\n",
+               sqlite3_column_text(s, 0),
+               sqlite3_column_int(s, 1));
+    }
+
+    sqlite3_finalize(s);
+
+    printf("\n");
 }

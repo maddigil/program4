@@ -60,11 +60,11 @@ int logic_registrar_averia(sqlite3 *db, const Config * cfg){
         a.id_vehiculo = leer_entero("  ID del vehiculo", 1,9999);
         a.id_estacion= 0;
         Vehiculo v;
-    if(!db_buscar_vehiculo(db, a.id_vehiculo,&v)){
+    if(!buscar_vehiculo(db, a.id_vehiculo,&v)){
         printf("  ERROR: Vehiculo %d no encontrado \n", a.id_vehiculo);
         return 0;
     }
-    db_actualizar_estado_vehiculo(db, a.id_vehiculo, "averiado");
+    actualizar_estado(db, a.id_vehiculo, "averiado");
     printf(" Vehivulo %d marcado como averiado. \n", a.id_vehiculo);
     
     }else{
@@ -81,7 +81,7 @@ int logic_registrar_averia(sqlite3 *db, const Config * cfg){
     char desc[MAX_STR];
     leer_cadena("  Descripcion: ", desc, MAX_STR-1);
 
-    if (db_insertar_averia(db, &a)) {
+    if (poner_averia(db, &a)) {
         printf("  Averia registrada correctamente.\n");
         char msg[512];
         snprintf(msg, sizeof(msg), "AVERIA registrada - vehiculo:%d estacion:%d tipo:%s",
@@ -101,7 +101,7 @@ int logic_cambiar_estado_vehiculo(sqlite3 *db, const Config * cfg){
 
     int id= leer_entero("  ID del vehiculo: ", 1,9999);
     Vehiculo v;
-    if(!db_buscar_vehiculo(db, id,&v)){
+    if(!buscar_vehiculo(db, id,&v)){
         printf("  ERROR: Vehiculo %d no encontrado \n", id);
         return 0;
     }
@@ -112,7 +112,7 @@ int logic_cambiar_estado_vehiculo(sqlite3 *db, const Config * cfg){
     int opcion = leer_entero(" Selecciona (1-3): ", 1,3);
     const char *estados[] = {"disponible", "en uso", "averiado"};
 
-    if(db_actualizar_estado_vehiculo(db, id, estados[opcion-1])){
+    if(actualizar_estado(db, id, estados[opcion-1])){
         printf("  Estado actualizado a '%s'.\n", estados[opcion-1]);
         char msg[256];
         snprintf(msg,sizeof(msg), "Vehiculo %d estado cambiado a %s", id, estados[opcion-1]);
@@ -131,7 +131,7 @@ int logic_cambiar_contrasena_usuario(sqlite3 *db){
     int id= leer_entero("  ID del usuario: ", 1,9999);
     
     Usuario u;
-    if(!db_buscar_usuario_id(db, id,&u)){
+    if(!buscar_usuario_por_id(db, id,&u)){
         printf("  ERROR: Usuario %d no encontrado \n", id);
         return 0;
     }
@@ -144,7 +144,7 @@ int logic_cambiar_contrasena_usuario(sqlite3 *db){
         printf(" Contrasena vacia, operacion cancelada.\n");
         return 0 ;
     }
-    if(db_cambiar_contrasenya(db, id, nueva)){
+    if(cambiar_contrasenya(db, id, nueva)){
         printf("  Contrasena actualizada correctamente.\n");
         return 1;
     }
