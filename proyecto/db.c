@@ -578,17 +578,17 @@ void db_estadisticas(sqlite3 *db){
 }
 void mapa_grande(sqlite3 *db){
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, "SELECT e.abreviatura, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
+    sqlite3_prepare_v2(db, "SELECT e.abreviacion, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
         "LEFT JOIN Vehiculo v "
         "ON e.id_estacion=v.ubicacion_estacion "
         "GROUP BY e.id_estacion;", -1, &stmt, NULL);
    
     while (sqlite3_step(stmt) == SQLITE_ROW)
     {
-        const char *abreviaturas=(const char*)sqlite3_column_text(stmt,0);
+        const char *abreviacion=(const char*)sqlite3_column_text(stmt,0);
             int plazas=sqlite3_column_int(stmt,1);
             int vehiculos=sqlite3_column_int(stmt,2);
-            printf("Estacion %s con %d vehiculos y %d plazas  \n",abreviaturas,plazas,vehiculos);
+            printf("Estacion %s con %d vehiculos y %d plazas  \n",abreviacion,plazas,vehiculos);
 
     }
     sqlite3_finalize(stmt);
@@ -596,17 +596,17 @@ void mapa_grande(sqlite3 *db){
 
 void mapa_pequenyo(sqlite3 *db){
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, "SELECT e.abreviatura, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
+    sqlite3_prepare_v2(db, "SELECT e.abreviacion, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
         "LEFT JOIN Vehiculo v "
         "ON e.id_estacion=v.ubicacion_estacion "
         "GROUP BY e.id_estacion;", -1, &stmt, NULL);
    
     while (sqlite3_step(stmt) == SQLITE_ROW)
     {
-        const char *abreviaturas=(const char*)sqlite3_column_text(stmt,0);
+        const char *abreviacion=(const char*)sqlite3_column_text(stmt,0);
             int plazas=sqlite3_column_int(stmt,1);
             int vehiculos=sqlite3_column_int(stmt,2);
-            printf("[%s] %d %d\n",abreviaturas,plazas,vehiculos);
+            printf("[%s] %d %d\n",abreviacion,plazas,vehiculos);
 
     }
     sqlite3_finalize(stmt);
