@@ -529,3 +529,38 @@ int listar_trayectosUsuario(sqlite3 *db, int id_usuario){
     printf("%d trayectos encontrados(si es 0 es que no hay trayectos registrados)\n", contador);
     return contador;
 }
+void mapa_grande(sqlite3 *db){
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, "SELECT e.abreviatura, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
+        "LEFT JOIN Vehiculo v "
+        "ON e.id_estacion=v.ubicacion_estacion "
+        "GROUP BY e.id_estacion;", -1, &stmt, NULL);
+   
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        const char *abreviaturas=(const char*)sqlite3_column_text(stmt,0);
+            int plazas=sqlite3_column_int(stmt,1);
+            int vehiculos=sqlite3_column_int(stmt,2);
+            printf("Estacion %s con %d vehiculos y %d plazas  \n",abreviaturas,plazas,vehiculos);
+
+    }
+    sqlite3_finalize(stmt);
+}
+
+void mapa_pequenyo(sqlite3 *db){
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, "SELECT e.abreviatura, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
+        "LEFT JOIN Vehiculo v "
+        "ON e.id_estacion=v.ubicacion_estacion "
+        "GROUP BY e.id_estacion;", -1, &stmt, NULL);
+   
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        const char *abreviaturas=(const char*)sqlite3_column_text(stmt,0);
+            int plazas=sqlite3_column_int(stmt,1);
+            int vehiculos=sqlite3_column_int(stmt,2);
+            printf("[%s] %d %d\n",abreviaturas,plazas,vehiculos);
+
+    }
+    sqlite3_finalize(stmt);
+}
