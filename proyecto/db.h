@@ -1,32 +1,30 @@
 #ifndef BD_H_
 #define BD_H_
+
 #include "sqlite3.h"
 
 typedef struct
 {
     int id_estacion;
-    char nombre;
+    char nombre[100];
     char abreviacion[16];
     int plazas;
-
 } Estacion;
 
 typedef struct
 {
     int id_vehiculo;
     char estado[23];
-    int ubicacion_estacion; // es el ID
+    int ubicacion_estacion;
     float bateria_restante;
-
-} Vehiculo;// prueba
+} Vehiculo;
 
 typedef struct
 {
     int id_usuario;
-    char nombre;
-    char contrasenya;
+    char nombre[100];
+    char contrasenya[100];
     int vehiculo_activo;
-
 } Usuario;
 
 typedef struct
@@ -35,10 +33,9 @@ typedef struct
     int id_vehiculo;
     int id_estacion;
     char tipo[32];
-    char descripcion;
+    char descripcion[256];
     char fecha[32];
-    char estado;
-
+    char estado[32];
 } Averia;
 
 typedef struct
@@ -59,41 +56,41 @@ typedef struct
     char hora_inicio[32];
     char hora_final[32];
     char estado[32];
-
 } Reserva;
 
-sqlite3* abrir_baseDatos(const char *ruta); // para abrir o crear el fichero
+sqlite3* abrir_baseDatos(const char *ruta);
 void cerrar_baseDatos(sqlite3 *db);
 int crearTablas(sqlite3 *db);
 
-// carga de csv
-int cargar_estaciones(sqlite3 *db, char *scv);
-int db_cargar_usuarios(sqlite3 *db, char *scv);
-int db_cargar_vehiculos(sqlite3 *db, char *scv);
+int cargar_estaciones(sqlite3 *db, const char *csv);
+int cargar_usuarios(sqlite3 *db, const char *csv);
+int cargar_vehiculos(sqlite3 *db, const char *csv);
 
-// para mostrar las estaciones
-int db_listarVehiculos(sqlite3 *db);
-int db_listar_vehiculos_estacion(sqlite3 *db, int id_estacion);
-int db_buscar_vehiculo(sqlite3 *db, int id, Vehiculo *out);
-int db_actualizar_estado_vehiculo(sqlite3 *db, int id, char *estado);
-int db_actualizar_autonomia(sqlite3 *db, int id, float autonomia);
+int listar_estaciones(sqlite3 *db);
+int listar_vehiculos(sqlite3 *db);
+int listar_vehiculosEstacion(sqlite3 *db, int id_estacion);
+int listar_usuarios(sqlite3 *db);
 
-int db_listar_usuarios(sqlite3 *db);
-int db_buscar_usuario_id(sqlite3 *db, int id, Usuario *mostrar);
-int db_buscar_usuario_nombre(sqlite3 *db, char *nombre, Usuario *mostrar);
-int db_cambiar_contrasenya(sqlite3 *db, int id, char *nueva);
-int db_actualizar_vehiculo_activo(sqlite3 *db, int id_usuario, int id_vehiculo);
+int buscar_vehiculo(sqlite3 *db, int id, Vehiculo *resultado);
+int buscar_usuario_por_id(sqlite3 *db, int id, Usuario *resultado);
+int buscar_usuario_por_nombre(sqlite3 *db, const char *nombre, Usuario *resultado);
 
-int db_insertar_averia(sqlite3 *db, Averia *a);
-int db_listar_averias_pendientes(sqlite3 *db);
-int db_marcar_averia_reparada(sqlite3 *db, int id);
-int db_contar_averias_pendientes(sqlite3 *db);
+int cambiar_contrasenya(sqlite3 *db, int id, const char *nueva);
 
-int db_insertar_reserva(sqlite3 *db, Reserva *r);
-int db_listar_reservas(sqlite3 *db);
+int actualizar_estado(sqlite3 *db, int id, const char *estado);
+int actualizar_bateria(sqlite3 *db, int id, float bateria);
+int actualizar_vehiculoActivo(sqlite3 *db, int id_usuario, int id_vehiculo);
 
-int db_insertar_trayecto(sqlite3 *db, Trayecto *t);
-int db_listar_trayectos_usuario(sqlite3 *db, int id_usuario);
+int poner_averia(sqlite3 *db, const Averia *a);
+int listar_averiasPendientes(sqlite3 *db);
+int marcar_reparada(sqlite3 *db, int id_averia);
+int contar_pendientes(sqlite3 *db);
+
+int listar_reservas(sqlite3 *db);
+int insertar_reserva(sqlite3 *db, const Reserva *r);
+
+int insertar_trayecto(sqlite3 *db, const Trayecto *t);
+int listar_trayectosUsuario(sqlite3 *db, int id_usuario);
 
 void db_estadisticas(sqlite3 *db);
 
