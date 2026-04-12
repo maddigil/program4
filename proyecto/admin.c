@@ -9,8 +9,8 @@ int admin_login(const Config *cfg){
     int intentos = 3;
 
     printf("\n +======================================+\n");
-    printf(" | SISTEMA DE GESTION EUSKOKAR |\n");
-    printf(" | ADMINISTRADOR LOCAL |\n");
+    printf(" | SISTEMA DE GESTION EUSKOKAR            |\n");
+    printf(" | ADMINISTRADOR LOCAL                    |\n");
     printf(" +======================================+\n\n");
 
     while(intentos > 0){
@@ -36,8 +36,8 @@ static void menu_vehiculos(sqlite3 *db, const Config *cfg){
 
     while(op != 0){
         printf("\n +-----------------------------+\n");
-        printf(" | GESTION VEHICULOS |\n");
-        printf(" +-----------------------------+\n");
+        printf(" | GESTION VEHICULOS             |\n");       
+        printf(" +-------------------------------+\n");
         printf(" 1. Listar todos los vehiculos\n");
         printf(" 2. Vehiculos de una estacion\n");
         printf(" 3. Cambiar estado de vehiculo\n");
@@ -79,8 +79,8 @@ static void menu_usuarios(sqlite3 *db){
     int op = -1;
 
     while(op != 0){
-        printf("\n +-----------------------------+\n");
-        printf(" | GESTION USUARIOS |\n");
+        printf("\n +---------------------------+\n");
+        printf(" | GESTION USUARIOS            |\n");
         printf(" +-----------------------------+\n");
         printf(" 1. Listar todos los usuarios\n");
         printf(" 2. Buscar usuario por ID\n");
@@ -115,7 +115,7 @@ static void menu_averias(sqlite3 *db, const Config *cfg){
         int pendientes = contar_pendientes(db);  
 
         printf("\n +-----------------------------+\n");
-        printf(" | GESTION AVERIAS |\n");
+        printf(" | GESTION AVERIAS              |\n");
         printf(" +-----------------------------+\n");
         printf(" Averias pendientes: %d\n\n", pendientes);
         printf(" 1. Ver averias pendientes\n");
