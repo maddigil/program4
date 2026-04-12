@@ -8,10 +8,10 @@ int admin_login(const Config *cfg){
     char usuario[MAX_VALOR], clave[MAX_VALOR];
     int intentos = 3;
 
-    printf("\n +======================================+\n");
-    printf(" | SISTEMA DE GESTION EUSKOKAR            |\n");
-    printf(" | ADMINISTRADOR LOCAL                    |\n");
-    printf(" +======================================+\n\n");
+    printf("\n +================================+\n");
+    printf(" | SISTEMA DE GESTION EUSKOKAR    |\n");
+    printf(" | ADMINISTRADOR LOCAL            |\n");
+    printf(" +================================+\n\n");
 
     while(intentos > 0){
         intentos--;
@@ -150,9 +150,9 @@ static void menu_estaciones(sqlite3 *db){
     int op = -1;
 
     while(op != 0){
-        printf("\n +-----------------------------+\n");
+        printf("\n +--------------------+\n");
         printf(" | GESTION ESTACIONES |\n");
-        printf(" +-----------------------------+\n");
+        printf(" +--------------------+\n");
         printf(" 1. Listar todas las estaciones\n");
         printf(" 2. Ver vehiculos de una estacion\n");
         printf(" 0. Volver\n");
@@ -173,9 +173,9 @@ void admin_menu(sqlite3 *db, const Config *cfg){
     int op = -1;
 
     while(op != 0){
-        printf("\n +======================================+\n");
-        printf(" | MENU PRINCIPAL ADMIN |\n");
-        printf(" +======================================+\n");
+        printf("\n +========================+\n");
+        printf(" | MENU PRINCIPAL ADMIN   |\n");
+        printf(" +========================+\n");
         printf(" 1. Gestion de estaciones\n");
         printf(" 2. Gestion de vehiculos\n");
         printf(" 3. Gestion de usuarios\n");
@@ -205,5 +205,5 @@ void admin_menu(sqlite3 *db, const Config *cfg){
     }
 
     log_escribir(cfg, "SESION cerrada por administrador");
-    printf("\n Sesion cerrada. ¡Hasta pronto!\n");
+    printf("\n Sesion cerrada. Hasta pronto.\n");
 }

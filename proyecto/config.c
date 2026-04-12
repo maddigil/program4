@@ -75,7 +75,7 @@ int config_cargar(const char *ruta, Config *cfg){
 
 void config_mostrar(const Config *cfg){
     printf("=== CONFIGURACION CARGADA ===\n");
-    printf("Admin: %s / %s\n", cfg->admin_usuario, cfg->admin_clave);
+    //printf("Admin: %s / %s\n", cfg->admin_usuario, cfg->admin_clave);
     printf("DB: %s\n", cfg->db_path);
     printf("CSV Estaciones: %s\n", cfg->estaciones_csv);
     printf("CSV Usuarios: %s\n", cfg->usuarios_csv);

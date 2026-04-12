@@ -222,7 +222,7 @@ int listar_vehiculos(sqlite3 *db){
     }
 
     sqlite3_finalize(stmt);
-    printf("%d vehiculos encontrados\n", contador);
+    printf("\n %d vehiculos encontrados\n", contador);
     return contador;
 }
 
