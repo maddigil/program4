@@ -67,7 +67,8 @@ int listar_usuarios(sqlite3 *db);
 int buscar_vehiculo(sqlite3 *db, int id, Vehiculo *resultado);
 int buscar_usuario_por_id(sqlite3 *db, int id, Usuario *resultado);
 int buscar_usuario_por_nombre(sqlite3 *db, const char *nombre, Usuario *resultado);
-
+int listar_vehiculosEstacion(sqlite3 *db, int id_estacion);
+int contar_pendientes(sqlite3 *db);
 int cambiar_contrasenya(sqlite3 *db, int id, const char *nueva);
 int actualizar_estado(sqlite3 *db, int id, const char *estado);
 int actualizar_bateria(sqlite3 *db, int id, float bateria);
