@@ -200,7 +200,7 @@ int listar_estaciones(sqlite3 *db){
     }
 
     sqlite3_finalize(stmt);
-    printf("%d estaciones encontradas\n", contador);
+    printf("\n%d estaciones encontradas\n", contador);
     return contador;
 }
 
@@ -244,7 +244,7 @@ int listar_vehiculosEstacion(sqlite3 *db, int id_estacion){
     }
 
     sqlite3_finalize(stmt);
-    printf("%d vehiculos encontrados\n", contador);
+    printf("\n%d vehiculos encontrados\n", contador);
     return contador;
 }
 
@@ -262,7 +262,7 @@ int listar_usuarios(sqlite3 *db){
     }
 
     sqlite3_finalize(stmt);
-    printf("%d usuarios encontrados\n", contador);
+    printf("\n%d usuarios encontrados\n", contador);
     return contador;
 }
 
