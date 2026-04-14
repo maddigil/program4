@@ -60,6 +60,7 @@ int cargar_estaciones(sqlite3 *db, const char *csv);
 int cargar_usuarios(sqlite3 *db, const char *csv);
 int cargar_vehiculos(sqlite3 *db, const char *csv);
 
+int listar_vehiculos(sqlite3 *db);
 int listar_estaciones(sqlite3 *db);
 int listar_vehiculosEstacion(sqlite3 *db, int id_estacion);
 int listar_usuarios(sqlite3 *db);
