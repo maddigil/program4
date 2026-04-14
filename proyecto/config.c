@@ -70,9 +70,11 @@ int config_cargar(const char *ruta, Config *cfg){
                 strcpy(*destino, valor);
             }
         }
+    }
 
     fclose(f);
     return 1;
+
 }
 
 void config_mostrar(const Config *cfg){
