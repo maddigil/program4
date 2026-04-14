@@ -3,6 +3,7 @@
 #include "logic.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 int admin_login(const Config *cfg){
     char usuario[MAX_VALOR], clave[MAX_VALOR];
