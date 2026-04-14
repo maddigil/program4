@@ -3,17 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-static void copiar_columna(sqlite3_stmt *stmt, int col, char *dest, size_t size){
-    const unsigned char *txt = sqlite3_column_text(stmt, col);
-
-    if(txt){
-        strncpy(dest, (const char*)txt, size - 1);
-        dest[size - 1] = '\0';
-    } else {
-        dest[0] = '\0';
-    }
-}
-
 sqlite3* abrir_baseDatos(const char *ruta){
     sqlite3 *db;
     if (sqlite3_open(ruta, &db) != SQLITE_OK){
@@ -199,155 +188,83 @@ int cargar_vehiculos(sqlite3 *db, const char *csv){
 int listar_estaciones(sqlite3 *db){
     sqlite3_stmt *stmt;
     int contador = 0;
-
-    if(sqlite3_prepare_v2(db,
-        "SELECT id_estacion, abreviacion, nombre, plazas FROM Estacion;",
-        -1, &stmt, NULL) != SQLITE_OK){
-        return -1;
-    }
+    sqlite3_prepare_v2(db, "SELECT id_estacion, abreviacion, nombre, plazas FROM Estacion;", -1, &stmt, NULL);
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-
-        Estacion e;
-
-        e.id_estacion = sqlite3_column_int(stmt, 0);
-        e.abreviacion = duplica_columna(stmt, 1);
-        e.nombre      = duplica_columna(stmt, 2);
-        e.plazas      = sqlite3_column_int(stmt, 3);
-
-        printf("%d | %s | %s | %d\n",
-               e.id_estacion,
-               e.abreviacion,
-               e.nombre,
-               e.plazas);
-
-        estacion_liberar(&e);
+        int id = sqlite3_column_int(stmt, 0);
+        const unsigned char *abrev = sqlite3_column_text(stmt, 1);
+        const unsigned char *nom = sqlite3_column_text(stmt, 2);
+        int plazas = sqlite3_column_int(stmt, 3);
+        printf("%d %s %s %d\n", id, abrev ? (const char *)abrev : "", nom ? (const char *)nom : "", plazas);
         contador++;
     }
 
     sqlite3_finalize(stmt);
-
-    printf("\n[%d estaciones encontradas]\n", contador);
+    printf("%d estaciones encontradas\n", contador);
     return contador;
 }
-
 
 int listar_vehiculos(sqlite3 *db){
     sqlite3_stmt *stmt;
     int contador = 0;
-
-    if(sqlite3_prepare_v2(db,
+    sqlite3_prepare_v2(db,
         "SELECT v.id_vehiculo, v.estado, v.bateria, e.abreviacion "
-        "FROM Vehiculo v "
-        "LEFT JOIN Estacion e ON v.ubicacion_estacion = e.id_estacion;",
-        -1, &stmt, NULL) != SQLITE_OK){
-        return -1;
-    }
+        "FROM Vehiculo v LEFT JOIN Estacion e ON v.ubicacion_estacion = e.id_estacion;",
+        -1, &stmt, NULL);
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-
-        Vehiculo v;
-
-        v.id_vehiculo = sqlite3_column_int(stmt, 0);
-        v.estado = duplica_columna(stmt, 1);
-        v.bateria_restante = sqlite3_column_double(stmt, 2);
-
-        char *estacion = duplica_columna(stmt, 3);
-
-        printf("%d | %s | %.2f%% | %s\n",
-               v.id_vehiculo,
-               v.estado ? v.estado : "",
-               v.bateria_restante,
-               estacion ? estacion : "");
-
-        vehiculo_liberar(&v);
-        free(estacion);
-
+        int id = sqlite3_column_int(stmt, 0);
+        const char *estado = (const char *)sqlite3_column_text(stmt, 1);
+        double bat = sqlite3_column_double(stmt, 2);
+        const char *estacion = (const char *)sqlite3_column_text(stmt, 3);
+        printf("%d %s %.2f %s\n", id, estado ? estado : "", bat, estacion ? estacion : "-");
         contador++;
     }
 
     sqlite3_finalize(stmt);
-
-    printf("\n%d vehiculos encontrados\n", contador);
+    printf("%d vehiculos encontrados\n", contador);
     return contador;
 }
-
-
-
 
 int listar_vehiculosEstacion(sqlite3 *db, int id_estacion){
     sqlite3_stmt *stmt;
     int contador = 0;
-
-    if(sqlite3_prepare_v2(db,
-        "SELECT id_vehiculo, estado, bateria "
-        "FROM Vehiculo WHERE ubicacion_estacion = ?;",
-        -1, &stmt, NULL) != SQLITE_OK){
-        return -1;
-    }
+    sqlite3_prepare_v2(db,
+        "SELECT id_vehiculo, estado, bateria FROM Vehiculo WHERE ubicacion_estacion = ?;",
+        -1, &stmt, NULL);
 
     sqlite3_bind_int(stmt, 1, id_estacion);
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-
-        Vehiculo v;
-
-        v.id_vehiculo = sqlite3_column_int(stmt, 0);
-        v.estado = duplica_columna(stmt, 1);
-        v.bateria_restante = sqlite3_column_double(stmt, 2);
-
-        printf("%d | %s | %.2f%%\n",
-               v.id_vehiculo,
-               v.estado ? v.estado : "",
-               v.bateria_restante);
-
-        vehiculo_liberar(&v);
+        int id = sqlite3_column_int(stmt, 0);
+        const char *estado = (const char *)sqlite3_column_text(stmt, 1);
+        double bat = sqlite3_column_double(stmt, 2);
+        printf("%d %s %.2f\n", id, estado ? estado : "", bat);
         contador++;
     }
 
     sqlite3_finalize(stmt);
-
-    printf("\n%d vehiculos en estacion %d\n", contador, id_estacion);
+    printf("%d vehiculos encontrados\n", contador);
     return contador;
 }
-
-
 
 int listar_usuarios(sqlite3 *db){
     sqlite3_stmt *stmt;
     int contador = 0;
-
-    if(sqlite3_prepare_v2(db,
-        "SELECT id_usuario, nombre, vehiculo_activo FROM Usuario ORDER BY id_usuario;",
-        -1, &stmt, NULL) != SQLITE_OK){
-        return -1;
-    }
+    sqlite3_prepare_v2(db, "SELECT id_usuario, nombre, vehiculo_activo FROM Usuario ORDER BY id_usuario;", -1, &stmt, NULL);
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-
-        Usuario u;
-
-        u.id_usuario = sqlite3_column_int(stmt, 0);
-        u.nombre = duplica_columna(stmt, 1);
-        u.vehiculo_activo = sqlite3_column_int(stmt, 2);
-
-        printf("%d | %s | %s\n",
-               u.id_usuario,
-               u.nombre ? u.nombre : "",
-               u.vehiculo_activo ? "SI" : "NO");
-
-        usuario_liberar(&u);
+        int id = sqlite3_column_int(stmt, 0);
+        const char *nombre = (const char *)sqlite3_column_text(stmt, 1);
+        int tiene_v = sqlite3_column_int(stmt, 2);
+        printf("%d %s %s\n", id, nombre ? nombre : "", tiene_v ? "Si" : "No");
         contador++;
     }
 
     sqlite3_finalize(stmt);
-
-    printf("\n%d usuarios encontrados\n", contador);
+    printf("%d usuarios encontrados\n", contador);
     return contador;
 }
-
-
-
 
 int buscar_vehiculo(sqlite3 *db, int id, Vehiculo *resultado){
     sqlite3_stmt *stmt;
@@ -658,39 +575,4 @@ void db_estadisticas(sqlite3 *db){
 
     sqlite3_finalize(s);
     printf("\n");
-}
-void mapa_grande(sqlite3 *db){
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, "SELECT e.abreviacion, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
-        "LEFT JOIN Vehiculo v "
-        "ON e.id_estacion=v.ubicacion_estacion "
-        "GROUP BY e.id_estacion;", -1, &stmt, NULL);
-   
-    while (sqlite3_step(stmt) == SQLITE_ROW)
-    {
-        const char *abreviacion=(const char*)sqlite3_column_text(stmt,0);
-            int plazas=sqlite3_column_int(stmt,1);
-            int vehiculos=sqlite3_column_int(stmt,2);
-            printf("Estacion %s con %d vehiculos y %d plazas  \n",abreviacion,plazas,vehiculos);
-
-    }
-    sqlite3_finalize(stmt);
-}
-
-void mapa_pequenyo(sqlite3 *db){
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, "SELECT e.abreviacion, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
-        "LEFT JOIN Vehiculo v "
-        "ON e.id_estacion=v.ubicacion_estacion "
-        "GROUP BY e.id_estacion;", -1, &stmt, NULL);
-   
-    while (sqlite3_step(stmt) == SQLITE_ROW)
-    {
-        const char *abreviacion=(const char*)sqlite3_column_text(stmt,0);
-            int plazas=sqlite3_column_int(stmt,1);
-            int vehiculos=sqlite3_column_int(stmt,2);
-            printf("[%s] %d %d\n",abreviacion,plazas,vehiculos);
-
-    }
-    sqlite3_finalize(stmt);
 }
