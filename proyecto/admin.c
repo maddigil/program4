@@ -159,7 +159,7 @@ static void menu_estaciones(sqlite3 *db){
         printf(" 0. Volver\n");
 
         op = leer_entero(" Opcion: ", 0, 2);
-
+ac
         if(op == 1){
             listar_estaciones(db);  
         }else if(op == 2){
