@@ -61,7 +61,7 @@ int cargar_usuarios(sqlite3 *db, const char *csv);
 int cargar_vehiculos(sqlite3 *db, const char *csv);
 
 int listar_estaciones(sqlite3 *db);
-int listar_vehiculos(sqlite3 *db);
+int listar_vehiculosEstacion(sqlite3 *db, int id_estacion);
 int listar_usuarios(sqlite3 *db);
 
 int buscar_vehiculo(sqlite3 *db, int id, Vehiculo *resultado);
@@ -83,6 +83,7 @@ int insertar_reserva(sqlite3 *db, const Reserva *r);
 
 int insertar_trayecto(sqlite3 *db, const Trayecto *t);
 int listar_trayectosUsuario(sqlite3 *db, int id_usuario);
+int contar_pendientes(sqlite3 *db); 
 
 void db_estadisticas(sqlite3 *db);
 
