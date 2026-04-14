@@ -417,7 +417,12 @@ int marcar_reparada(sqlite3 *db, int id_averia){
 
 int contar_pendientes(sqlite3 *db){
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM Averia WHERE estado='pendiente';", -1, &stmt, NULL);
+    int porsierror= sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM Averia WHERE estado='pendiente';", -1, &stmt, NULL);
+    if (porsierror != SQLITE_OK) {
+        printf("Error: %s\n", sqlite3_errmsg(db));
+        return 0;
+    }
+    
     int n = 0;
     if(sqlite3_step(stmt) == SQLITE_ROW){
         n = sqlite3_column_int(stmt, 0);
