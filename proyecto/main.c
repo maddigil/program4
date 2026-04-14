@@ -43,6 +43,9 @@ int main(void){
     admin_menu(db, &cfg);
     cerrar_baseDatos(db);
 
+    /*liberar memoria de configuración*/
+    config_liberar(&cfg);
+
     printf("\nPrograma finalizado correctamente.\n");
     return 0;
 }
