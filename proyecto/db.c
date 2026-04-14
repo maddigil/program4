@@ -217,7 +217,7 @@ int listar_vehiculos(sqlite3 *db){
         const char *estado = (const char *)sqlite3_column_text(stmt, 1);
         double bat = sqlite3_column_double(stmt, 2);
         const char *estacion = (const char *)sqlite3_column_text(stmt, 3);
-        printf("%d %s %.2f %s\n", id, estado ? estado : "", bat, estacion ? estacion : "-");
+        printf("%d %s %.2f %s\n", id, estado ? (const char*) estado : "", bat, estacion ? (const char*) estacion : "-");
         contador++;
     }
 
