@@ -1,6 +1,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h> 
 
 int config_cargar(const char *ruta, Config *cfg){
     FILE *f = fopen(ruta, "r");

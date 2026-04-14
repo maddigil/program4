@@ -10,4 +10,5 @@ int admin_login(const Config *cfg);
 /* Muestra el menú principal del administrador. */
 void admin_menu(sqlite3 *db, const Config *cfg);
 
+
 #endif
