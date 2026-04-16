@@ -80,9 +80,9 @@ int logic_registrar_averia(sqlite3 *db, const Config *cfg){
     }
 
     printf("Tipo de averia:\n");
-    printf("  1. mecanica\n  2. bateria\n  3. carga\n  4. otro\n");
-    int t = leer_entero(" Selecciona (1-4): ", 1, 4);
-    const char *tipos[] = {"mecanica", "bateria", "carga", "otro"};
+    printf("  1. mecanica\n  2. bateria\n  3. otro\n");
+    int t = leer_entero(" Selecciona (1-3): ", 1, 3);
+    const char *tipos[] = {"mecanica", "bateria", "otro"};
     strncpy(a.tipo, tipos[t - 1], sizeof(a.tipo) - 1);
     a.tipo[sizeof(a.tipo) - 1] = '\0';
 
