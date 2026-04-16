@@ -43,6 +43,6 @@ int main(void){
     admin_menu(db, &cfg);
     cerrar_baseDatos(db);
 
-    printf("\nPrograma finalizado correctamente.\n");
+
     return 0;
 }

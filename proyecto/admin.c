@@ -184,6 +184,8 @@ void admin_menu(sqlite3 *db, const Config *cfg){
         printf(" 5. Estadisticas del sistema\n");
         printf(" 6. Ver log del sistema\n");
         printf(" 7. Ver reservas\n");
+        printf(" 8. Ver mapa grande\n");
+        printf(" 9. Ver mapa pequenyo\n");
         printf(" 0. Salir\n");
 
         op = leer_entero(" Opcion: ", 0, 7);
@@ -202,6 +204,11 @@ void admin_menu(sqlite3 *db, const Config *cfg){
             logic_mostrar_log(cfg);
         }else if(op == 7){
             listar_reservas(db);  
+        }else if(op == 8){
+            mapa_grande(db);  
+        }
+        else if(op == 9){
+            mapa_pequenyo(db);  
         }
     }
 
