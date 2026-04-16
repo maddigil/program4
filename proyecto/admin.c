@@ -36,16 +36,16 @@ static void menu_vehiculos(sqlite3 *db, const Config *cfg){
     int op = -1;
 
     while(op != 0){
-        printf("\n +-----------------------------+\n");
-        printf(" | GESTION VEHICULOS             |\n");       
-        printf(" +-------------------------------+\n");
+        printf("\n +---------------------+\n");
+        printf(" | GESTION VEHICULOS   |\n");       
+        printf(" +---------------------+\n");
         printf(" 1. Listar todos los vehiculos\n");
         printf(" 2. Vehiculos de una estacion\n");
         printf(" 3. Cambiar estado de vehiculo\n");
         printf(" 4. Actualizar autonomia (bateria)\n");
         printf(" 0. Volver\n");
 
-        op = leer_entero(" Opción: ", 0, 4);
+        op = leer_entero(" Opcion: ", 0, 4);
 
         if(op == 1){
             listar_vehiculos(db);  
@@ -59,7 +59,7 @@ static void menu_vehiculos(sqlite3 *db, const Config *cfg){
             Vehiculo v;
 
             if(buscar_vehiculo(db, id, &v)){  
-                printf("Autonomía actual: %.1f%%\n", v.bateria_restante);
+                printf("Autonomia actual: %.1f%%\n", v.bateria_restante);
                 int nueva = leer_entero(" Nueva autonomia (0-100): ", 0, 100);
                 actualizar_bateria(db, id, (float)nueva);  
                 printf("Autonomia actualizada\n");
@@ -80,9 +80,9 @@ static void menu_usuarios(sqlite3 *db){
     int op = -1;
 
     while(op != 0){
-        printf("\n +---------------------------+\n");
-        printf(" | GESTION USUARIOS            |\n");
-        printf(" +-----------------------------+\n");
+        printf("\n +---------------------+\n");
+        printf(" | GESTION USUARIOS    |\n");
+        printf(" +---------------------+\n");
         printf(" 1. Listar todos los usuarios\n");
         printf(" 2. Buscar usuario por ID\n");
         printf(" 3. Cambiar contrasena de usuario\n");
@@ -115,9 +115,9 @@ static void menu_averias(sqlite3 *db, const Config *cfg){
     while(op != 0){
         int pendientes = contar_pendientes(db);  
 
-        printf("\n +-----------------------------+\n");
-        printf(" | GESTION AVERIAS              |\n");
-        printf(" +-----------------------------+\n");
+        printf("\n +-------------------+\n");
+        printf(" | GESTION AVERIAS   |\n");
+        printf(" +-------------------+\n");
         printf(" Averias pendientes: %d\n\n", pendientes);
         printf(" 1. Ver averias pendientes\n");
         printf(" 2. Registrar nueva averia\n");
@@ -188,7 +188,7 @@ void admin_menu(sqlite3 *db, const Config *cfg){
         printf(" 9. Ver mapa pequenyo\n");
         printf(" 0. Salir\n");
 
-        op = leer_entero(" Opcion: ", 0, 7);
+        op = leer_entero(" Opcion: ", 0, 9);
 
         if(op == 1){
             menu_estaciones(db);
