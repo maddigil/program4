@@ -48,3 +48,11 @@
 [2026-04-16 13:23:06] SESION iniciada por administrador
 [2026-04-16 13:39:19] SESION cerrada por administrador
 >>>>>>> 292753116342467feac76e17c7851cf403ed3884
+[2026-04-16 17:37:46] SESION iniciada por administrador
+[2026-04-16 17:39:40] AVERIA registrada - vehiculo:2 estacion:0 tipo:mecanica
+[2026-04-16 17:41:30] AVERIA registrada - vehiculo:0 estacion:5 tipo:mecanica
+[2026-04-16 17:42:33] AVERIA registrada - vehiculo:0 estacion:2 tipo:otro
+[2026-04-16 17:42:36] SESION cerrada por administrador
+[2026-04-16 17:43:03] SESION iniciada por administrador
+[2026-04-16 17:43:24] AVERIA registrada - vehiculo:0 estacion:5 tipo:bateria
+[2026-04-16 17:43:26] SESION cerrada por administrador

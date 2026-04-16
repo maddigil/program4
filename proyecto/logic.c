@@ -75,7 +75,7 @@ int logic_registrar_averia(sqlite3 *db, const Config *cfg){
         actualizar_estado(db, a.id_vehiculo, "averiado");
         printf("Vehiculo %d marcado como averiado.\n", a.id_vehiculo);
     }else{
-        a.id_estacion = leer_entero(" ID de la estacion: \n", 1, 9999);
+        a.id_estacion = leer_entero(" ID de la estacion: ", 1, 9999);
         a.id_vehiculo = 0;
     }
 
