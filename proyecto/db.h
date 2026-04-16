@@ -3,28 +3,32 @@
 
 #include "sqlite3.h"
 
-typedef struct {
+typedef struct
+{
     int id_estacion;
     char nombre[100];
     char abreviacion[20];
     int plazas;
 } Estacion;
 
-typedef struct {
+typedef struct
+{
     int id_vehiculo;
     char estado[32];
     int ubicacion_estacion;
     float bateria_restante;
 } Vehiculo;
 
-typedef struct {
+typedef struct
+{
     int id_usuario;
     char nombre[100];
     char contrasenya[100];
     int vehiculo_activo;
 } Usuario;
 
-typedef struct {
+typedef struct
+{
     int id_averia;
     int id_vehiculo;
     int id_estacion;
@@ -34,7 +38,8 @@ typedef struct {
     char estado[32];
 } Averia;
 
-typedef struct {
+typedef struct
+{
     int id_trayecto;
     int usuario_id;
     int vehiculo_id;
@@ -43,7 +48,8 @@ typedef struct {
     float distancia;
 } Trayecto;
 
-typedef struct {
+typedef struct
+{
     int id_reserva;
     int usuario_id;
     int vehiculo_id;
@@ -52,7 +58,7 @@ typedef struct {
     char estado[32];
 } Reserva;
 
-sqlite3* abrir_baseDatos(const char *ruta);
+sqlite3 *abrir_baseDatos(const char *ruta);
 void cerrar_baseDatos(sqlite3 *db);
 int crearTablas(sqlite3 *db);
 
@@ -82,11 +88,12 @@ int insertar_reserva(sqlite3 *db, const Reserva *r);
 
 int insertar_trayecto(sqlite3 *db, const Trayecto *t);
 int listar_trayectosUsuario(sqlite3 *db, int id_usuario);
-int contar_pendientes(sqlite3 *db); 
+int contar_pendientes(sqlite3 *db);
+void esquema_grande(sqlite3 *db);
+void esquema_pequenyo(sqlite3 *db);
 
 void db_estadisticas(sqlite3 *db);
 void mapa_grande(sqlite3 *db);
 void mapa_pequenyo(sqlite3 *db);
-
 
 #endif
