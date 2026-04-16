@@ -85,5 +85,8 @@ int listar_trayectosUsuario(sqlite3 *db, int id_usuario);
 int contar_pendientes(sqlite3 *db); 
 
 void db_estadisticas(sqlite3 *db);
+void mapa_grande(sqlite3 *db);
+void mapa_pequenyo(sqlite3 *db);
+
 
 #endif

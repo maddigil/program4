@@ -200,7 +200,7 @@ int listar_estaciones(sqlite3 *db){
     }
 
     sqlite3_finalize(stmt);
-    printf("%d estaciones encontradas\n", contador);
+    printf("\n%d estaciones encontradas\n", contador);
     return contador;
 }
 
@@ -222,7 +222,7 @@ int listar_vehiculos(sqlite3 *db){
     }
 
     sqlite3_finalize(stmt);
-    printf("%d vehiculos encontrados\n", contador);
+    printf("\n%d vehiculos encontrados\n", contador);
     return contador;
 }
 
@@ -244,7 +244,7 @@ int listar_vehiculosEstacion(sqlite3 *db, int id_estacion){
     }
 
     sqlite3_finalize(stmt);
-    printf("%d vehiculos encontrados\n", contador);
+    printf("\n%d vehiculos encontrados\n", contador);
     return contador;
 }
 
@@ -549,9 +549,9 @@ void db_estadisticas(sqlite3 *db){
     sqlite3_stmt *s;
     int n;
 
-    printf("\n  +==============================+\n");
+    printf("\n  +------------------------------+\n");
     printf("  |   ESTADISTICAS DEL SISTEMA   |\n");
-    printf("  +==============================+\n\n");
+    printf("  +------------------------------+\n\n");
 
     sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM Usuario;", -1, &s, NULL);
     n = 0;
