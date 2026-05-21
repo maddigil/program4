@@ -1,8 +1,8 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 #include <string>
+#include <winsock2.h>
 typedef int SOCKET;
-const SOCKET INVALID_SOCKET =-1;
 
 class Cliente
 {
@@ -23,6 +23,10 @@ class Servidor
 {
     private:
         SOCKET listening; // esto es para que el programa esta escuchando la red
+         WSADATA WSAData;
+        SOCKET servidor, cliente;
+        SOCKADDR_IN serverAddr, clienteAddr;
+        char buffer[1024];
     public:
         Servidor();
         ~Servidor();
