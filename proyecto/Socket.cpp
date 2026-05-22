@@ -23,4 +23,16 @@ bool Servidor::escuchar(int puerto) {
     cout << "Escuchar en el puerto:  " << puerto << endl;
     return true;
 }
-     
+
+   
+    SOCKET Servidor::aceptar() 
+    {
+        int clienteAddrSize = sizeof(clienteAddr);
+        
+        if((cliente=accept(servidor , (SOCKADDR *)&clienteAddr, &clienteAddrSize))! = INVALID_SOCKET)
+        {
+            cout << "conectado"<<endl;
+        }
+        
+    }
+        
