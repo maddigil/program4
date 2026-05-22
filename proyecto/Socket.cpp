@@ -29,7 +29,7 @@ bool Servidor::escuchar(int puerto) {
     {
         int clienteAddrSize = sizeof(clienteAddr);
         
-        if((cliente=accept(servidor , (SOCKADDR *)&clienteAddr, &clienteAddrSize))! = INVALID_SOCKET)
+        if((cliente=accept(servidor , (SOCKADDR *)&clienteAddr, &clienteAddrSize)) != INVALID_SOCKET)
         {
             cout << "conectado"<<endl;
         }
