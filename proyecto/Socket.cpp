@@ -48,3 +48,28 @@ Cliente::Cliente() {
 Cliente::~Cliente() {
     cerrar();
 }
+
+
+bool Cliente::conectar(const std::string& ip, int puerto) {
+   
+    this->socket = ::socket(AF_INET, SOCK_STREAM, 0);
+    
+   
+    if (this->socket == INVALID_SOCKET) {
+        return false;
+    }
+
+    targetAddr.sin_family = AF_INET;
+    targetAddr.sin_port = htons(puerto);
+    targetAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+
+    
+    if (::connect(this->socket, (SOCKADDR*)&targetAddr, sizeof(targetAddr)) == SOCKET_ERROR) {
+        std::cout << "No se ha conectado al servidor" << std::endl;
+        cerrar();
+        return false;
+    }
+
+    std::cout << "conectado al servidor" << std::endl;
+    return true;
+}

@@ -14,7 +14,7 @@ class Cliente
     public:
         Cliente();
         ~Cliente();
-        bool concetar(const std::string& ip, int puerto); // para la ip y el puerto
+        bool conectar(const std::string& ip, int puerto); // para la ip y el puerto
         bool enviar(const std::string& mensaje); // esto por que el cliente pide cosas
         bool recibir(std::string& mensaje_out); // esto es por que se va a quedar esperando el cliente hasta que el servidor le responda
         void cerrar();
