@@ -8,7 +8,8 @@ Servidor::Servidor()
 {
 
     WSAStartup(MAKEWORD(2, 0), &WSAData);
-    servidor = socket(AF_INET, SOCK_STREAM, 0);
+    servidor = INVALID_SOCKET;
+    cliente = INVALID_SOCKET;
 }
 
 Servidor::~Servidor()
