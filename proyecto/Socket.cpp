@@ -49,7 +49,6 @@ Cliente::~Cliente() {
     cerrar();
 }
 
-
 bool Cliente::conectar(const std::string& ip, int puerto) {
    
     this->socket = ::socket(AF_INET, SOCK_STREAM, 0);
