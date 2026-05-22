@@ -11,6 +11,10 @@ Servidor::Servidor() {
     servidor=socket(AF_INET, SOCK_STREAM,0);
 }
 
+Servidor::~Servidor() {
+    cerrar();
+}
+
 bool Servidor::escuchar(int puerto) {
     servidor = socket(AF_INET, SOCK_STREAM, 0);
     
@@ -41,3 +45,6 @@ Cliente::Cliente() {
     socket=INVALID_SOCKET;
 }
 
+Cliente::~Cliente() {
+    cerrar();
+}
