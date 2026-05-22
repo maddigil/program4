@@ -44,7 +44,7 @@ void Servidor::enviar()
 {
     cout << "Escirbir mensaje: ";
     cin >> this->buffer;
-    send(servidor, buffer, sizeof(buffer), 0);
+    send(cliente, buffer, sizeof(buffer), 0);
     cout << "Enviado!" << endl;
     memset(buffer, 0, sizeof(buffer));
 }
