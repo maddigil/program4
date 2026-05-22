@@ -40,6 +40,21 @@ SOCKET Servidor::aceptar()
     }
     return cliente;
 }
+void Servidor::enviar()
+{
+    cout << "Escirbir mensaje: ";
+    cin >> this->buffer;
+    send(servidor, buffer, sizeof(buffer), 0);
+    cout << "Enviado!" << endl;
+    memset(buffer, 0, sizeof(buffer));
+}
+
+void Servidor::recibir()
+{
+    recv(cliente, buffer, sizeof(buffer), 0);
+    cout << "El cliente dice: " << buffer << endl;
+    memset(buffer, 0, sizeof(buffer));
+}
 
 void Servidor::cerrar()
 {
