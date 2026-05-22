@@ -42,7 +42,7 @@ bool Servidor::escuchar(int puerto) {
 
 Cliente::Cliente() {
     WSAStartup(MAKEWORD(2,0), &WSAData);
-    socket=INVALID_SOCKET;
+    servidor=INVALID_SOCKET;
 }
 
 Cliente::~Cliente() {
@@ -50,20 +50,17 @@ Cliente::~Cliente() {
 }
 
 bool Cliente::conectar(const std::string& ip, int puerto) {
-   
-    this->socket = ::socket(AF_INET, SOCK_STREAM, 0);
+    this->servidor = ::socket(AF_INET, SOCK_STREAM, 0);
     
-   
-    if (this->socket == INVALID_SOCKET) {
+    if (this->servidor == INVALID_SOCKET) {
         return false;
     }
 
-    targetAddr.sin_family = AF_INET;
-    targetAddr.sin_port = htons(puerto);
-    targetAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(puerto);
+    addr.sin_addr.s_addr = inet_addr(ip.c_str());
 
-    
-    if (::connect(this->socket, (SOCKADDR*)&targetAddr, sizeof(targetAddr)) == SOCKET_ERROR) {
+    if (::connect(this->servidor, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         std::cout << "No se ha conectado al servidor" << std::endl;
         cerrar();
         return false;
