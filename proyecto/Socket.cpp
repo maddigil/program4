@@ -69,3 +69,11 @@ bool Cliente::conectar(const std::string& ip, int puerto) {
     std::cout << "conectado al servidor" << std::endl;
     return true;
 }
+
+void Cliente::enviar() {
+    cout << "Escirbir mensaje: ";
+    cin>>this->buffer;
+    send(servidor,buffer,sizeof(buffer),0);
+    cout << "Enviado!" << endl;
+    memset(buffer,0,sizeof(buffer));
+}
