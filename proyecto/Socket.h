@@ -7,8 +7,10 @@ typedef int SOCKET;
 class Cliente
 {
     private:
-        SOCKET  sock;
-
+        WSADATA WSAData;
+        SOCKET socket;
+        SOCKADDR_IN targetAddr;
+        char buffer[1024];
     public:
         Cliente();
         ~Cliente();
@@ -23,7 +25,7 @@ class Servidor
 {
     private:
         SOCKET listening; // esto es para que el programa esta escuchando la red
-         WSADATA WSAData;
+        WSADATA WSAData;
         SOCKET servidor, cliente;
         SOCKADDR_IN serverAddr, clienteAddr;
         char buffer[1024];
