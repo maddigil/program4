@@ -32,6 +32,8 @@ class Servidor
         ~Servidor();
         bool escuchar(int puerto); // esto es por si un cliente llama al puerto
         SOCKET aceptar(); //esto es para crear conexion con el cliente
+        void enviar(); 
+        void recibir(); 
         void cerrar();
 };
 
