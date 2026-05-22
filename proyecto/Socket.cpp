@@ -4,60 +4,67 @@
 
 using namespace std;
 
+Servidor::Servidor()
+{
 
-Servidor::Servidor() {
-    
-    WSAStartup(MAKEWORD(2,0), &WSAData);
-    servidor=socket(AF_INET, SOCK_STREAM,0);
+    WSAStartup(MAKEWORD(2, 0), &WSAData);
+    servidor = socket(AF_INET, SOCK_STREAM, 0);
 }
 
-Servidor::~Servidor() {
+Servidor::~Servidor()
+{
     cerrar();
 }
 
-bool Servidor::escuchar(int puerto) {
+bool Servidor::escuchar(int puerto)
+{
     servidor = socket(AF_INET, SOCK_STREAM, 0);
-    
+
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(puerto); 
+    serverAddr.sin_port = htons(puerto);
     bind(servidor, (SOCKADDR *)&serverAddr, sizeof(serverAddr));
     listen(servidor, 0);
-    
+
     cout << "Escuchar en el puerto:  " << puerto << endl;
     return true;
 }
 
-   
-SOCKET Servidor::aceptar() 
-    {
-        int clienteAddrSize = sizeof(clienteAddr);
-        
-        if((cliente=accept(servidor , (SOCKADDR *)&clienteAddr, &clienteAddrSize)) != INVALID_SOCKET)
-        {
-            cout << "conectado"<<endl;
-        }
-        
-    }
+SOCKET Servidor::aceptar()
+{
+    int clienteAddrSize = sizeof(clienteAddr);
 
-void Servidor::cerrar(){
+    if ((cliente = accept(servidor, (SOCKADDR *)&clienteAddr, &clienteAddrSize)) != INVALID_SOCKET)
+    {
+        cout << "conectado" << endl;
+    }
+    return cliente;
+}
+
+void Servidor::cerrar()
+{
     closesocket(cliente);
     WSACleanup();
-    cout << "Cliente desconectado"<< endl<< endl;
+    cout << "Cliente desconectado" << endl
+         << endl;
 }
-Cliente::Cliente() {
-    WSAStartup(MAKEWORD(2,0), &WSAData);
-    servidor=INVALID_SOCKET;
+Cliente::Cliente()
+{
+    WSAStartup(MAKEWORD(2, 0), &WSAData);
+    servidor = INVALID_SOCKET;
 }
 
-Cliente::~Cliente() {
+Cliente::~Cliente()
+{
     cerrar();
 }
 
-bool Cliente::conectar(const std::string& ip, int puerto) {
+bool Cliente::conectar(const std::string &ip, int puerto)
+{
     this->servidor = ::socket(AF_INET, SOCK_STREAM, 0);
-    
-    if (this->servidor == INVALID_SOCKET) {
+
+    if (this->servidor == INVALID_SOCKET)
+    {
         return false;
     }
 
@@ -65,7 +72,8 @@ bool Cliente::conectar(const std::string& ip, int puerto) {
     addr.sin_port = htons(puerto);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
 
-    if (::connect(this->servidor, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+    if (::connect(this->servidor, (SOCKADDR *)&addr, sizeof(addr)) == SOCKET_ERROR)
+    {
         std::cout << "No se ha conectado al servidor" << std::endl;
         cerrar();
         return false;
@@ -75,22 +83,26 @@ bool Cliente::conectar(const std::string& ip, int puerto) {
     return true;
 }
 
-void Cliente::enviar() {
+void Cliente::enviar()
+{
     cout << "Escirbir mensaje: ";
-    cin>>this->buffer;
-    send(servidor,buffer,sizeof(buffer),0);
+    cin >> this->buffer;
+    send(servidor, buffer, sizeof(buffer), 0);
     cout << "Enviado!" << endl;
-    memset(buffer,0,sizeof(buffer));
+    memset(buffer, 0, sizeof(buffer));
 }
 
-void  Cliente::recibir(){
-    recv(servidor,buffer,sizeof(buffer),0);
-    cout << "El servidor dice: "<<buffer<<endl;
-    memset(buffer,0,sizeof(buffer));
+void Cliente::recibir()
+{
+    recv(servidor, buffer, sizeof(buffer), 0);
+    cout << "El servidor dice: " << buffer << endl;
+    memset(buffer, 0, sizeof(buffer));
 }
 
-void Cliente::cerrar(){
+void Cliente::cerrar()
+{
     closesocket(servidor);
     WSACleanup();
-    cout << "Socket cerrado"<< endl<< endl;
+    cout << "Socket cerrado" << endl
+         << endl;
 }
