@@ -23,7 +23,6 @@ class Cliente
 class Servidor
 {
     private:
-        SOCKET listening; // esto es para que el programa esta escuchando la red
         WSADATA WSAData;
         SOCKET servidor, cliente;
         SOCKADDR_IN serverAddr, clienteAddr;
