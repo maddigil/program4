@@ -29,7 +29,7 @@ bool Servidor::escuchar(int puerto) {
 }
 
    
-    SOCKET Servidor::aceptar() 
+SOCKET Servidor::aceptar() 
     {
         int clienteAddrSize = sizeof(clienteAddr);
         
@@ -40,6 +40,11 @@ bool Servidor::escuchar(int puerto) {
         
     }
 
+void Servidor::cerrar(){
+    closesocket(cliente);
+    WSACleanup();
+    cout << "Cliente desconectado"<< endl<< endl;
+}
 Cliente::Cliente() {
     WSAStartup(MAKEWORD(2,0), &WSAData);
     servidor=INVALID_SOCKET;
@@ -82,4 +87,10 @@ void  Cliente::recibir(){
     recv(servidor,buffer,sizeof(buffer),0);
     cout << "El servidor dice: "<<buffer<<endl;
     memset(buffer,0,sizeof(buffer));
+}
+
+void Cliente::cerrar(){
+    closesocket(servidor);
+    WSACleanup();
+    cout << "Socket cerrado"<< endl<< endl;
 }
