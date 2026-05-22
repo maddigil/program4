@@ -35,4 +35,9 @@ bool Servidor::escuchar(int puerto) {
         }
         
     }
-        
+
+Cliente::Cliente() {
+    WSAStartup(MAKEWORD(2,0), &WSAData);
+    socket=INVALID_SOCKET;
+}
+
