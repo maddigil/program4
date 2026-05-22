@@ -77,3 +77,9 @@ void Cliente::enviar() {
     cout << "Enviado!" << endl;
     memset(buffer,0,sizeof(buffer));
 }
+
+void  Cliente::recibir(){
+    recv(servidor,buffer,sizeof(buffer),0);
+    cout << "El servidor dice: "<<buffer<<endl;
+    memset(buffer,0,sizeof(buffer));
+}
