@@ -13,7 +13,7 @@ int admin_login(const Config *cfg)
     printf("\n +================================+\n");
     printf(" | SISTEMA DE GESTION EUSKOKAR    |\n");
     printf(" | ADMINISTRADOR LOCAL            |\n");
-    printf(" +================================+\n\n");
+    printf(" +================================+\n");
 
     while (intentos > 0)
     {
