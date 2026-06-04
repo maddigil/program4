@@ -1,6 +1,6 @@
 #include <iostream>
 #include <winsock2.h>
-#include "Socket.h"
+#include "socket.h"
 
 using namespace std;
 
