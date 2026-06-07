@@ -1,6 +1,4 @@
 
-
-
 #include "menu_usuario.h"
 #include "cache_manager.h"
 #include "ascii_mapa.h"
@@ -8,8 +6,6 @@
 #include <sstream>
 #include <vector>
 #include <string>
-
-
 
 
 static std::vector<std::string> split(const std::string& linea, char sep = '|') {
@@ -20,22 +16,18 @@ static std::vector<std::string> split(const std::string& linea, char sep = '|') 
     return campos;
 }
 
-/
-
 static EstacionCache parseEstacion(const std::string& linea) {
     auto f = split(linea);
     EstacionCache e{};
     if (f.size() >= 5) {
-        e.id               = std::stoi(f[0]);
-        e.codigo           = f[1];
-        e.nombre           = f[2];
-        e.total_vehiculos  = std::stoi(f[3]);
-        e.disponibles      = std::stoi(f[4]);
+        e.id              = std::stoi(f[0]);
+        e.codigo          = f[1];
+        e.nombre          = f[2];
+        e.total_vehiculos = std::stoi(f[3]);
+        e.disponibles     = std::stoi(f[4]);
     }
     return e;
 }
-
-
 
 static VehiculoCache parseVehiculo(const std::string& linea, int id_vehiculo_activo) {
     auto f = split(linea);
@@ -51,9 +43,6 @@ static VehiculoCache parseVehiculo(const std::string& linea, int id_vehiculo_act
 }
 
 
-
-
-
 MenuUsuario::MenuUsuario(Cliente& cli, int id_usuario,
                          const std::string& nombre_usuario)
     : cli_(cli),
@@ -67,22 +56,21 @@ MenuUsuario::MenuUsuario(Cliente& cli, int id_usuario,
 MenuUsuario::~MenuUsuario() = default;
 
 
-
 void MenuUsuario::ejecutar() {
     while (true) {
         mostrarMenu();
         int opcion = leerOpcion();
         switch (opcion) {
-            case 1: opcionMapa();        break;
-            case 2: opcionEstacion();    break;
-            case 3: opcionReservar();    break;
-            case 4: opcionUsarVehiculo();break;
-            case 5: opcionFinTrayecto(); break;
-            case 6: opcionReportarAveria();break;
-            case 7: opcionHistorial();   break;
+            case 1: opcionMapa();           break;
+            case 2: opcionEstacion();       break;
+            case 3: opcionReservar();       break;
+            case 4: opcionUsarVehiculo();   break;
+            case 5: opcionFinTrayecto();    break;
+            case 6: opcionReportarAveria(); break;
+            case 7: opcionHistorial();      break;
             case 0:
                 cli_.enviarComando("SALIR");
-                cli_.leerLinea(); // consumir OK
+                cli_.leerLinea();
                 std::cout << "\nHasta pronto!\n";
                 return;
             default:
@@ -92,12 +80,10 @@ void MenuUsuario::ejecutar() {
 }
 
 
-
 void MenuUsuario::mostrarMenu() const {
     std::cout << "\n+=================================+\n";
     std::cout << "|  EUSKOKAR - Menu usuario        |\n";
     std::cout << "|  Sesion: " << nombre_usuario_;
-    
     int pad = 22 - (int)nombre_usuario_.size();
     for (int i = 0; i < pad; ++i) std::cout << ' ';
     std::cout << "|\n";
@@ -131,27 +117,24 @@ void MenuUsuario::opcionMapa() {
         std::cout << "Consultando servidor...\n";
         cli_.enviarComando("LISTAR_EST");
         std::string primera = cli_.leerLinea();
-        if (primera.rfind("ERROR", 0) == 0) {
-            std::cout << primera << "\n";
-            return;
-        }
+        if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
         std::vector<std::string> lineas = cli_.leerLista();
-        for (const auto& l : lineas) {
+        for (const auto& l : lineas)
             if (!l.empty()) estaciones.push_back(parseEstacion(l));
-        }
         cache_->actualizarEstaciones(estaciones);
     }
 
-    std::vector<DatosEstacion> datos;
+    std::vector<DatoEstacion> datos;
     for (const auto& e : estaciones) {
-        DatosEstacion d;
+        DatoEstacion d;
         d.id          = e.id;
-        d.codigo      = e.codigo;
+        d.abrev       = e.codigo;
         d.nombre      = e.nombre;
+        d.plazas      = e.total_vehiculos;
         d.disponibles = e.disponibles;
         datos.push_back(d);
     }
-    AsciiMapa::dibujarMapa(datos);
+    dibujar_mapa_grande(datos, id_vehiculo_activo_ > 0 ? id_vehiculo_activo_ : 0);
 }
 
 
@@ -171,10 +154,9 @@ void MenuUsuario::opcionEstacion() {
     }
 
     std::cout << "\nEstaciones disponibles:\n";
-    for (const auto& e : estaciones) {
+    for (const auto& e : estaciones)
         std::cout << "  " << e.id << ". " << e.nombre
                   << " [" << e.disponibles << "/" << e.total_vehiculos << " libres]\n";
-    }
 
     std::cout << "ID de estacion (0 para volver): ";
     int id_est;
@@ -182,7 +164,6 @@ void MenuUsuario::opcionEstacion() {
     std::cin.ignore();
     if (id_est <= 0) return;
 
-    // Vehiculos de la estacion (cache por id_estacion)
     std::vector<VehiculoCache> vehiculos;
     if (cache_->vehiculosValidos(id_est)) {
         std::cout << "[cache] Usando vehiculos en cache...\n";
@@ -199,21 +180,20 @@ void MenuUsuario::opcionEstacion() {
         cache_->actualizarVehiculos(id_est, vehiculos);
     }
 
-    // Buscar nombre de la estacion
     std::string nombre_est = "Estacion " + std::to_string(id_est);
     for (const auto& e : estaciones)
         if (e.id == id_est) { nombre_est = e.nombre; break; }
 
-    // Convertir y dibujar minimapa
-    std::vector<DatosVehiculo> datos;
+    std::vector<DatoVehiculo> datos;
     for (const auto& v : vehiculos) {
-        DatosVehiculo d;
-        d.id       = v.id;
-        d.estado   = v.estado;
-        d.es_mio   = v.es_mio;
+        DatoVehiculo d;
+        d.id      = v.id;
+        d.estado  = v.estado;
+        d.bateria = 0.0f; // el servidor no envia bateria en este comando
         datos.push_back(d);
     }
-    AsciiMapa::dibujarMinimapa(nombre_est, datos);
+    dibujar_minimapa(nombre_est, datos,
+                     id_vehiculo_activo_ > 0 ? id_vehiculo_activo_ : 0);
 }
 
 
@@ -227,10 +207,8 @@ void MenuUsuario::opcionReservar() {
     std::string resp = cli_.leerLinea();
     std::cout << resp << "\n";
 
-    if (resp.rfind("OK", 0) == 0) {
-        // Invalidar cache de vehiculos porque el estado cambio
+    if (resp.rfind("OK", 0) == 0)
         cache_->invalidarTodo();
-    }
 }
 
 
@@ -250,7 +228,6 @@ void MenuUsuario::opcionUsarVehiculo() {
     std::cout << resp << "\n";
 
     if (resp.rfind("OK", 0) == 0) {
-        // resp = "OK <id_trayecto>"
         std::istringstream ss(resp);
         std::string ok;
         ss >> ok >> id_trayecto_activo_;
@@ -298,7 +275,6 @@ void MenuUsuario::opcionReportarAveria() {
     std::string desc;
     std::getline(std::cin, desc);
 
-    // Reemplazar espacios en tipo y desc por '_' para el protocolo
     for (auto& c : tipo) if (c == ' ') c = '_';
     for (auto& c : desc) if (c == ' ') c = '_';
 
@@ -307,9 +283,8 @@ void MenuUsuario::opcionReportarAveria() {
     std::string resp = cli_.leerLinea();
     std::cout << resp << "\n";
 
-    if (resp.rfind("OK", 0) == 0) {
+    if (resp.rfind("OK", 0) == 0)
         cache_->invalidarTodo();
-    }
 }
 
 
@@ -324,14 +299,12 @@ void MenuUsuario::opcionHistorial() {
     std::cout.width(20); std::cout << "Inicio";
     std::cout.width(20); std::cout << "Fin";
     std::cout.width(10); std::cout << "Km";
-    std::cout << "\n";
-    std::cout << std::string(56, '-') << "\n";
+    std::cout << "\n" << std::string(56, '-') << "\n";
 
     std::vector<std::string> lineas = cli_.leerLista();
     for (const auto& l : lineas) {
         if (l.empty()) continue;
         auto f = split(l);
-        // Formato esperado: id|inicio|fin|distancia
         if (f.size() >= 4) {
             std::cout.width(6);  std::cout << f[0];
             std::cout.width(20); std::cout << f[1];

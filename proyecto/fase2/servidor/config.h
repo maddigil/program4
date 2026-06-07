@@ -1,10 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-/*tamaño max para ruta de fichero*/
-#define MAX_RUTA 256
+#include "protocolo.h"   
 
-/*tmaño max para valores en consola*/
+#define MAX_RUTA  256
 #define MAX_VALOR 128
 
 typedef struct {
@@ -14,17 +13,15 @@ typedef struct {
     char *estaciones_csv;
     char *usuarios_csv;
     char *vehiculos_csv;
-    char *log_path;       /*ruta del log */
+    char *log_path;
+    char *servidor_ip;      /* IP en la que escucha el servidor */
+    int   servidor_puerto;  /* Puerto (por defecto PUERTO_DEFAULT) */
 } Config;
 
-/*para leer el fichero de config.cfg y rellenar aquí, devuelve 1 si se ejecuta bien, sino 0*/
-/*se utiliza el const para que no haya errores de compilación, no funcinaría sin él*/
-int config_cargar(const char *ruta, Config *cfg);
+int  config_cargar(const char *ruta, Config *cfg);
 
-/*imprime en consola lo que has cargado antes*/
-/*se utiliza el const para que aseguremos que no haya errores luego, funcionaría sin él*/
 void config_mostrar(const Config *cfg);
 
 void config_liberar(Config *cfg);
 
-#endif
+#endif 
