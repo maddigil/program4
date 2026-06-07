@@ -24,8 +24,7 @@ SRV_SRCS = servidor/main.c \
 CLI_SRCS = cliente/main_cliente.cpp \
            cliente/cliente.cpp \
            cliente/menu_usuario.cpp \
-           cliente/ascii_mapa.cpp \
-           cliente/cache_manager.cpp
+           cliente/ascii_mapa.cpp
 
 SRV_OBJS = $(SRV_SRCS:.c=.o)
 CLI_OBJS = $(CLI_SRCS:.cpp=.o)

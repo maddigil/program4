@@ -1,358 +1,345 @@
-/*
- * menu_usuario.cpp
- * Implementacion del menu de usuario del cliente C++ de Euskokar.
- *
- * Cada opcion del menu:
- *   1. Construye el comando de protocolo (p.ej. "LISTAR_EST")
- *   2. Lo envia al servidor via cli.enviarComando()
- *   3. Lee la respuesta con cli.leerLinea() o cli.leerLista()
- *   4. Muestra el resultado al usuario (con ASCII art si procede)
- */
+
+
 
 #include "menu_usuario.h"
+#include "cache_manager.h"
 #include "ascii_mapa.h"
-#include "protocolo.h"
-
 #include <iostream>
 #include <sstream>
-#include <string>
 #include <vector>
-#include <limits>
-#include <iomanip>
+#include <string>
 
-/* ------------------------------------------------------------------ */
-/* Utilidades de entrada                                                */
-/* ------------------------------------------------------------------ */
 
-static int leerEntero(const std::string &prompt, int minVal, int maxVal) {
-    int val;
+
+
+static std::vector<std::string> split(const std::string& linea, char sep = '|') {
+    std::vector<std::string> campos;
+    std::stringstream ss(linea);
+    std::string campo;
+    while (std::getline(ss, campo, sep)) campos.push_back(campo);
+    return campos;
+}
+
+/
+
+static EstacionCache parseEstacion(const std::string& linea) {
+    auto f = split(linea);
+    EstacionCache e{};
+    if (f.size() >= 5) {
+        e.id               = std::stoi(f[0]);
+        e.codigo           = f[1];
+        e.nombre           = f[2];
+        e.total_vehiculos  = std::stoi(f[3]);
+        e.disponibles      = std::stoi(f[4]);
+    }
+    return e;
+}
+
+
+
+static VehiculoCache parseVehiculo(const std::string& linea, int id_vehiculo_activo) {
+    auto f = split(linea);
+    VehiculoCache v{};
+    if (f.size() >= 4) {
+        v.id          = std::stoi(f[0]);
+        v.matricula   = f[1];
+        v.estado      = f[2];
+        v.id_estacion = std::stoi(f[3]);
+        v.es_mio      = (v.id == id_vehiculo_activo);
+    }
+    return v;
+}
+
+
+
+
+
+MenuUsuario::MenuUsuario(Cliente& cli, int id_usuario,
+                         const std::string& nombre_usuario)
+    : cli_(cli),
+      id_usuario_(id_usuario),
+      nombre_usuario_(nombre_usuario),
+      id_vehiculo_activo_(-1),
+      id_trayecto_activo_(-1),
+      cache_(std::make_unique<CacheManager>())
+{}
+
+MenuUsuario::~MenuUsuario() = default;
+
+
+
+void MenuUsuario::ejecutar() {
     while (true) {
-        std::cout << prompt;
-        if (std::cin >> val && val >= minVal && val <= maxVal) {
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            return val;
+        mostrarMenu();
+        int opcion = leerOpcion();
+        switch (opcion) {
+            case 1: opcionMapa();        break;
+            case 2: opcionEstacion();    break;
+            case 3: opcionReservar();    break;
+            case 4: opcionUsarVehiculo();break;
+            case 5: opcionFinTrayecto(); break;
+            case 6: opcionReportarAveria();break;
+            case 7: opcionHistorial();   break;
+            case 0:
+                cli_.enviarComando("SALIR");
+                cli_.leerLinea(); // consumir OK
+                std::cout << "\nHasta pronto!\n";
+                return;
+            default:
+                std::cout << "Opcion no valida.\n";
         }
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << " Valor invalido. Introduce un numero entre "
-                  << minVal << " y " << maxVal << ".\n";
     }
 }
 
-static std::string leerCadena(const std::string &prompt) {
-    std::string s;
-    std::cout << prompt;
-    std::getline(std::cin, s);
-    return s;
+
+
+void MenuUsuario::mostrarMenu() const {
+    std::cout << "\n+=================================+\n";
+    std::cout << "|  EUSKOKAR - Menu usuario        |\n";
+    std::cout << "|  Sesion: " << nombre_usuario_;
+    
+    int pad = 22 - (int)nombre_usuario_.size();
+    for (int i = 0; i < pad; ++i) std::cout << ' ';
+    std::cout << "|\n";
+    std::cout << "+=================================+\n";
+    std::cout << " 1. Ver mapa de Gipuzkoa\n";
+    std::cout << " 2. Ver estacion concreta (minimapa)\n";
+    std::cout << " 3. Reservar un vehiculo\n";
+    std::cout << " 4. Desbloquear / iniciar trayecto\n";
+    std::cout << " 5. Finalizar trayecto activo\n";
+    std::cout << " 6. Reportar averia\n";
+    std::cout << " 7. Ver mi historial de trayectos\n";
+    std::cout << " 0. Salir\n";
+    std::cout << "Opcion: ";
 }
 
-static float leerFlotante(const std::string &prompt) {
-    float v;
-    while (true) {
-        std::cout << prompt;
-        if (std::cin >> v && v >= 0.0f) {
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            return v;
+int MenuUsuario::leerOpcion() const {
+    int op;
+    std::cin >> op;
+    std::cin.ignore();
+    return op;
+}
+
+
+void MenuUsuario::opcionMapa() {
+    std::vector<EstacionCache> estaciones;
+
+    if (cache_->estacionesValidas()) {
+        std::cout << "[cache] Usando datos en cache...\n";
+        estaciones = cache_->getEstaciones();
+    } else {
+        std::cout << "Consultando servidor...\n";
+        cli_.enviarComando("LISTAR_EST");
+        std::string primera = cli_.leerLinea();
+        if (primera.rfind("ERROR", 0) == 0) {
+            std::cout << primera << "\n";
+            return;
         }
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << " Valor invalido.\n";
-    }
-}
-
-/* ------------------------------------------------------------------ */
-/* Parseo de campos separados por '|'                                  */
-/* ------------------------------------------------------------------ */
-
-static std::vector<std::string> split(const std::string &s, char sep) {
-    std::vector<std::string> partes;
-    std::stringstream ss(s);
-    std::string parte;
-    while (std::getline(ss, parte, sep)) {
-        partes.push_back(parte);
-    }
-    return partes;
-}
-
-/* ------------------------------------------------------------------ */
-/* Opciones del menu                                                    */
-/* ------------------------------------------------------------------ */
-
-/*
- * Opcion 1: Mapa de Gipuzkoa
- * Pide LISTAR_EST y dibuja el mapa grande.
- */
-static void op_mapa_gipuzkoa(Cliente &cli, int id_veh_activo) {
-    cli.enviarComando(CMD_LISTAR_EST);
-    auto lineas = cli.leerLista();
-
-    std::vector<DatoEstacion> estaciones;
-    for (const auto &l : lineas) {
-        auto p = split(l, '|');
-        if (p.size() < 5) continue;
-        DatoEstacion e;
-        e.id          = std::stoi(p[0]);
-        e.abrev       = p[1];
-        e.nombre      = p[2];
-        e.plazas      = std::stoi(p[3]);
-        e.disponibles = std::stoi(p[4]);
-        estaciones.push_back(e);
+        std::vector<std::string> lineas = cli_.leerLista();
+        for (const auto& l : lineas) {
+            if (!l.empty()) estaciones.push_back(parseEstacion(l));
+        }
+        cache_->actualizarEstaciones(estaciones);
     }
 
-    dibujar_mapa_grande(estaciones, id_veh_activo);
+    std::vector<DatosEstacion> datos;
+    for (const auto& e : estaciones) {
+        DatosEstacion d;
+        d.id          = e.id;
+        d.codigo      = e.codigo;
+        d.nombre      = e.nombre;
+        d.disponibles = e.disponibles;
+        datos.push_back(d);
+    }
+    AsciiMapa::dibujarMapa(datos);
 }
 
-/*
- * Opcion 2: Ver una estacion especifica (minimapa)
- */
-static void op_ver_estacion(Cliente &cli, int id_veh_activo) {
-    int id_est = leerEntero(" ID de la estacion: ", 1, 9999);
 
-    std::string cmd = std::string(CMD_VEH_ESTACION) + " " + std::to_string(id_est);
-    cli.enviarComando(cmd);
-    auto lineas = cli.leerLista();
+void MenuUsuario::opcionEstacion() {
+    std::vector<EstacionCache> estaciones;
+    if (cache_->estacionesValidas()) {
+        estaciones = cache_->getEstaciones();
+    } else {
+        std::cout << "Consultando estaciones...\n";
+        cli_.enviarComando("LISTAR_EST");
+        std::string primera = cli_.leerLinea();
+        if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
+        std::vector<std::string> lineas = cli_.leerLista();
+        for (const auto& l : lineas)
+            if (!l.empty()) estaciones.push_back(parseEstacion(l));
+        cache_->actualizarEstaciones(estaciones);
+    }
 
-    /* Necesitamos tambien el nombre de la estacion */
-    cli.enviarComando(CMD_LISTAR_EST);
-    auto todas = cli.leerLista();
+    std::cout << "\nEstaciones disponibles:\n";
+    for (const auto& e : estaciones) {
+        std::cout << "  " << e.id << ". " << e.nombre
+                  << " [" << e.disponibles << "/" << e.total_vehiculos << " libres]\n";
+    }
+
+    std::cout << "ID de estacion (0 para volver): ";
+    int id_est;
+    std::cin >> id_est;
+    std::cin.ignore();
+    if (id_est <= 0) return;
+
+    // Vehiculos de la estacion (cache por id_estacion)
+    std::vector<VehiculoCache> vehiculos;
+    if (cache_->vehiculosValidos(id_est)) {
+        std::cout << "[cache] Usando vehiculos en cache...\n";
+        vehiculos = cache_->getVehiculos(id_est);
+    } else {
+        std::cout << "Consultando vehiculos...\n";
+        cli_.enviarComando("VEH_ESTACION " + std::to_string(id_est));
+        std::string primera = cli_.leerLinea();
+        if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
+        std::vector<std::string> lineas = cli_.leerLista();
+        for (const auto& l : lineas)
+            if (!l.empty())
+                vehiculos.push_back(parseVehiculo(l, id_vehiculo_activo_));
+        cache_->actualizarVehiculos(id_est, vehiculos);
+    }
+
+    // Buscar nombre de la estacion
     std::string nombre_est = "Estacion " + std::to_string(id_est);
-    for (const auto &l : todas) {
-        auto p = split(l, '|');
-        if (p.size() >= 3 && std::stoi(p[0]) == id_est) {
-            nombre_est = p[2] + " (" + p[1] + ")";
-            break;
-        }
-    }
+    for (const auto& e : estaciones)
+        if (e.id == id_est) { nombre_est = e.nombre; break; }
 
-    std::vector<DatoVehiculo> vehiculos;
-    for (const auto &l : lineas) {
-        auto p = split(l, '|');
-        if (p.size() < 3) continue;
-        DatoVehiculo v;
-        v.id      = std::stoi(p[0]);
-        v.estado  = p[1];
-        v.bateria = std::stof(p[2]);
-        vehiculos.push_back(v);
+    // Convertir y dibujar minimapa
+    std::vector<DatosVehiculo> datos;
+    for (const auto& v : vehiculos) {
+        DatosVehiculo d;
+        d.id       = v.id;
+        d.estado   = v.estado;
+        d.es_mio   = v.es_mio;
+        datos.push_back(d);
     }
-
-    dibujar_minimapa(nombre_est, vehiculos, id_veh_activo);
+    AsciiMapa::dibujarMinimapa(nombre_est, datos);
 }
 
-/*
- * Opcion 3: Reservar un vehiculo
- */
-static void op_reservar(Cliente &cli, int /*id_usuario*/) {
-    /* Primero mostramos los disponibles */
-    cli.enviarComando(CMD_LISTAR_VEH);
-    auto lineas = cli.leerLista();
 
-    std::cout << "\n  Vehiculos disponibles:\n";
-    std::cout << "  " << std::string(45, '-') << "\n";
-    std::cout << "  " << std::left
-              << std::setw(6) << "ID"
-              << std::setw(14) << "Estado"
-              << std::setw(10) << "Bateria"
-              << std::setw(8)  << "Estacion"
-              << "\n";
-    std::cout << "  " << std::string(45, '-') << "\n";
+void MenuUsuario::opcionReservar() {
+    std::cout << "ID del vehiculo a reservar: ";
+    int id_veh;
+    std::cin >> id_veh;
+    std::cin.ignore();
 
-    bool hay_disp = false;
-    for (const auto &l : lineas) {
-        auto p = split(l, '|');
-        if (p.size() < 4) continue;
-        if (p[1] != "disponible") continue;
-        hay_disp = true;
-        std::cout << "  "
-                  << std::setw(6) << p[0]
-                  << std::setw(14) << p[1]
-                  << std::setw(9)  << p[2] << "%"
-                  << std::setw(8)  << p[3]
-                  << "\n";
+    cli_.enviarComando("RESERVAR " + std::to_string(id_veh));
+    std::string resp = cli_.leerLinea();
+    std::cout << resp << "\n";
+
+    if (resp.rfind("OK", 0) == 0) {
+        // Invalidar cache de vehiculos porque el estado cambio
+        cache_->invalidarTodo();
     }
+}
 
-    if (!hay_disp) {
-        std::cout << "  No hay vehiculos disponibles en este momento.\n\n";
+
+void MenuUsuario::opcionUsarVehiculo() {
+    if (id_vehiculo_activo_ != -1) {
+        std::cout << "Ya tienes un vehiculo activo (ID " << id_vehiculo_activo_
+                  << "). Finaliza el trayecto primero (opcion 5).\n";
         return;
     }
-    std::cout << "\n";
+    std::cout << "ID del vehiculo a desbloquear: ";
+    int id_veh;
+    std::cin >> id_veh;
+    std::cin.ignore();
 
-    int id_veh = leerEntero(" ID del vehiculo a reservar (0 para cancelar): ", 0, 99999);
-    if (id_veh == 0) return;
+    cli_.enviarComando("USAR_VEH " + std::to_string(id_veh));
+    std::string resp = cli_.leerLinea();
+    std::cout << resp << "\n";
 
-    std::string cmd = std::string(CMD_RESERVAR) + " " + std::to_string(id_veh);
-    cli.enviarComando(cmd);
-    std::string resp = cli.leerLinea();
-
-    if (Cliente::esOk(resp)) {
-        std::cout << "\n  Reserva realizada: " << Cliente::valorOk(resp) << "\n\n";
-    } else {
-        std::cout << "\n  Error: " << Cliente::mensajeError(resp) << "\n\n";
+    if (resp.rfind("OK", 0) == 0) {
+        // resp = "OK <id_trayecto>"
+        std::istringstream ss(resp);
+        std::string ok;
+        ss >> ok >> id_trayecto_activo_;
+        id_vehiculo_activo_ = id_veh;
+        cache_->invalidarTodo();
+        std::cout << "Trayecto iniciado (ID " << id_trayecto_activo_ << "). Buen viaje!\n";
     }
 }
 
-/*
- * Opcion 4: Desbloquear (usar) el vehiculo reservado
- */
-static int op_usar_vehiculo(Cliente &cli) {
-    int id_veh = leerEntero(" ID del vehiculo a desbloquear: ", 1, 99999);
 
-    std::string cmd = std::string(CMD_USAR_VEH) + " " + std::to_string(id_veh);
-    cli.enviarComando(cmd);
-    std::string resp = cli.leerLinea();
-
-    if (Cliente::esOk(resp)) {
-        int id_tray = std::stoi(Cliente::valorOk(resp));
-        std::cout << "\n  Vehiculo desbloqueado. Trayecto iniciado (ID: "
-                  << id_tray << ").\n";
-        std::cout << "  Recuerda finalizar el trayecto cuando aparques.\n\n";
-        return id_tray;
-    } else {
-        std::cout << "\n  Error: " << Cliente::mensajeError(resp) << "\n\n";
-        return 0;
-    }
-}
-
-/*
- * Opcion 5: Finalizar trayecto
- */
-static void op_finalizar_trayecto(Cliente &cli, int &id_tray_activo) {
-    if (id_tray_activo == 0) {
-        std::cout << "\n  No tienes ningun trayecto activo.\n\n";
+void MenuUsuario::opcionFinTrayecto() {
+    if (id_trayecto_activo_ == -1) {
+        std::cout << "No tienes ningun trayecto activo.\n";
         return;
     }
+    std::cout << "Distancia recorrida (km): ";
+    double dist;
+    std::cin >> dist;
+    std::cin.ignore();
 
-    std::cout << "\n  Trayecto activo: ID " << id_tray_activo << "\n";
-    float dist = leerFlotante(" Distancia recorrida (km): ");
+    cli_.enviarComando("FIN_TRAYECTO " + std::to_string(id_trayecto_activo_)
+                       + " " + std::to_string(dist));
+    std::string resp = cli_.leerLinea();
+    std::cout << resp << "\n";
 
-    std::string cmd = std::string(CMD_FIN_TRAYECTO) + " " +
-                      std::to_string(id_tray_activo) + " " +
-                      std::to_string(dist);
-    cli.enviarComando(cmd);
-    std::string resp = cli.leerLinea();
-
-    if (Cliente::esOk(resp)) {
-        std::cout << "\n  " << Cliente::valorOk(resp) << "\n";
-        std::cout << "  El vehiculo ha sido liberado. ¡Gracias!\n\n";
-        id_tray_activo = 0;
-    } else {
-        std::cout << "\n  Error: " << Cliente::mensajeError(resp) << "\n\n";
+    if (resp.rfind("OK", 0) == 0) {
+        id_vehiculo_activo_ = -1;
+        id_trayecto_activo_ = -1;
+        cache_->invalidarTodo();
     }
 }
 
-/*
- * Opcion 6: Reportar averia
- */
-static void op_reportar_averia(Cliente &cli) {
-    std::cout << "\n  +----------------------------------+\n";
-    std::cout << "  |      REPORTAR AVERIA             |\n";
-    std::cout << "  +----------------------------------+\n";
 
-    int id_veh = leerEntero(" ID del vehiculo: ", 1, 99999);
+void MenuUsuario::opcionReportarAveria() {
+    std::cout << "ID del vehiculo averiado: ";
+    int id_veh;
+    std::cin >> id_veh;
+    std::cin.ignore();
 
-    std::cout << "  Tipo de averia:\n";
-    std::cout << "    1. mecanica\n    2. bateria\n    3. carga\n    4. otro\n";
-    int t = leerEntero(" Selecciona (1-4): ", 1, 4);
-    const char *tipos[] = {"mecanica", "bateria", "carga", "otro"};
+    std::cout << "Tipo de averia (ej: neumatico, motor, frenos): ";
+    std::string tipo;
+    std::getline(std::cin, tipo);
 
-    std::string desc = leerCadena(" Descripcion breve: ");
+    std::cout << "Descripcion: ";
+    std::string desc;
+    std::getline(std::cin, desc);
 
-    std::string cmd = std::string(CMD_REPORTAR_AV) + " " +
-                      std::to_string(id_veh) + " " +
-                      tipos[t-1] + " " +
-                      (desc.empty() ? "sin descripcion" : desc);
-    cli.enviarComando(cmd);
-    std::string resp = cli.leerLinea();
+    // Reemplazar espacios en tipo y desc por '_' para el protocolo
+    for (auto& c : tipo) if (c == ' ') c = '_';
+    for (auto& c : desc) if (c == ' ') c = '_';
 
-    if (Cliente::esOk(resp)) {
-        std::cout << "\n  " << Cliente::valorOk(resp) << "\n\n";
-    } else {
-        std::cout << "\n  Error: " << Cliente::mensajeError(resp) << "\n\n";
+    cli_.enviarComando("REPORTAR_AV " + std::to_string(id_veh)
+                       + " " + tipo + " " + desc);
+    std::string resp = cli_.leerLinea();
+    std::cout << resp << "\n";
+
+    if (resp.rfind("OK", 0) == 0) {
+        cache_->invalidarTodo();
     }
 }
 
-/*
- * Opcion 7: Historial de trayectos
- */
-static void op_historial(Cliente &cli) {
-    cli.enviarComando(CMD_HISTORIAL);
-    auto lineas = cli.leerLista();
 
-    std::cout << "\n  Historial de trayectos:\n";
-    std::cout << "  " << std::string(65, '-') << "\n";
-    std::cout << "  " << std::left
-              << std::setw(6) << "ID"
-              << std::setw(8) << "Vehic."
-              << std::setw(20) << "Inicio"
-              << std::setw(20) << "Fin"
-              << std::setw(10) << "Dist(km)"
-              << "\n";
-    std::cout << "  " << std::string(65, '-') << "\n";
+void MenuUsuario::opcionHistorial() {
+    cli_.enviarComando("HISTORIAL");
+    std::string primera = cli_.leerLinea();
+    if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
 
-    if (lineas.empty()) {
-        std::cout << "  (Sin trayectos registrados)\n";
-    }
-
-    for (const auto &l : lineas) {
-        auto p = split(l, '|');
-        if (p.size() < 5) continue;
-        std::cout << "  "
-                  << std::setw(6) << p[0]
-                  << std::setw(8) << p[1]
-                  << std::setw(20) << p[2]
-                  << std::setw(20) << p[3]
-                  << std::setw(10) << p[4]
-                  << "\n";
-    }
+    std::cout << "\n--- Historial de trayectos (ultimos 20) ---\n";
+    std::cout << std::left;
+    std::cout.width(6);  std::cout << "ID";
+    std::cout.width(20); std::cout << "Inicio";
+    std::cout.width(20); std::cout << "Fin";
+    std::cout.width(10); std::cout << "Km";
     std::cout << "\n";
-}
+    std::cout << std::string(56, '-') << "\n";
 
-/* ------------------------------------------------------------------ */
-/* Menu principal del usuario                                           */
-/* ------------------------------------------------------------------ */
-
-void menu_principal(Cliente &cli, int id_usuario, const std::string &nombre) {
-    int  op             = -1;
-    int  id_tray_activo = 0;   /* 0 = sin trayecto activo */
-    int  id_veh_activo  = 0;   /* 0 = sin vehiculo activo */
-
-    while (op != 0 && cli.conectado()) {
-        std::cout << "\n +=================================+\n";
-        std::cout << " |  EUSKOKAR - Menu usuario        |\n";
-        std::cout << " |  Sesion: " << std::left << std::setw(22) << nombre << "|\n";
-        if (id_tray_activo)
-            std::cout << " |  * Trayecto activo: "
-                      << std::setw(10) << id_tray_activo << "        |\n";
-        std::cout << " +=================================+\n";
-        std::cout << " 1. Ver mapa de Gipuzkoa\n";
-        std::cout << " 2. Ver estacion concreta (minimapa)\n";
-        std::cout << " 3. Reservar un vehiculo\n";
-        std::cout << " 4. Desbloquear / iniciar trayecto\n";
-        std::cout << " 5. Finalizar trayecto activo\n";
-        std::cout << " 6. Reportar averia\n";
-        std::cout << " 7. Ver mi historial de trayectos\n";
-        std::cout << " 0. Salir\n";
-
-        op = leerEntero(" Opcion: ", 0, 7);
-
-        switch (op) {
-            case 1: op_mapa_gipuzkoa(cli, id_veh_activo);               break;
-            case 2: op_ver_estacion(cli, id_veh_activo);                 break;
-            case 3: op_reservar(cli, id_usuario);                        break;
-            case 4:
-                id_tray_activo = op_usar_vehiculo(cli);
-                if (id_tray_activo) id_veh_activo = 0; /* lo actualizamos */
-                break;
-            case 5:
-                op_finalizar_trayecto(cli, id_tray_activo);
-                if (!id_tray_activo) id_veh_activo = 0;
-                break;
-            case 6: op_reportar_averia(cli);                             break;
-            case 7: op_historial(cli);                                   break;
-            case 0: break;
+    std::vector<std::string> lineas = cli_.leerLista();
+    for (const auto& l : lineas) {
+        if (l.empty()) continue;
+        auto f = split(l);
+        // Formato esperado: id|inicio|fin|distancia
+        if (f.size() >= 4) {
+            std::cout.width(6);  std::cout << f[0];
+            std::cout.width(20); std::cout << f[1];
+            std::cout.width(20); std::cout << f[2];
+            std::cout.width(10); std::cout << f[3];
+            std::cout << "\n";
+        } else {
+            std::cout << l << "\n";
         }
     }
-
-    /* Notificar al servidor que el cliente cierra */
-    cli.enviarComando(CMD_SALIR);
-    cli.leerLinea();
 }

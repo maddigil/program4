@@ -1,21 +1,35 @@
-/*
- * menu_usuario.h
- * Menu interactivo del cliente C++ de Euskokar.
- * Contiene todas las opciones que puede realizar un usuario normal.
- */
-
-#ifndef MENU_USUARIO_H
-#define MENU_USUARIO_H
+#pragma once
 
 #include "cliente.h"
+#include <string>
+#include <memory>
 
-/*
- * menu_principal(cli, id_usuario, nombre)
- * Muestra el menu principal y gestiona todas las opciones del usuario.
- * cli      → conexion activa con el servidor
- * id_usuario → id del usuario tras el login
- * nombre     → nombre del usuario para mostrarlo en pantalla
- */
-void menu_principal(Cliente &cli, int id_usuario, const std::string &nombre);
+class CacheManager;
 
-#endif /* MENU_USUARIO_H */
+class MenuUsuario {
+public:
+    MenuUsuario(Cliente& cli, int id_usuario, const std::string& nombre_usuario);
+    ~MenuUsuario();
+
+    void ejecutar();
+
+private:
+    Cliente&    cli_;
+    int         id_usuario_;
+    std::string nombre_usuario_;
+    int         id_vehiculo_activo_;   // -1 si no tiene vehiculo activo
+    int         id_trayecto_activo_;   // -1 si no hay trayecto en curso
+
+    std::unique_ptr<CacheManager> cache_;
+
+    void mostrarMenu() const;
+    int  leerOpcion()  const;
+
+    void opcionMapa();
+    void opcionEstacion();
+    void opcionReservar();
+    void opcionUsarVehiculo();
+    void opcionFinTrayecto();
+    void opcionReportarAveria();
+    void opcionHistorial();
+};
