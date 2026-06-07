@@ -1,8 +1,4 @@
-/*
- * ascii_mapa.cpp
- * Implementacion de los mapas ASCII segun el diseño de FASE_0.pdf.
- */
-
+//en comentarios explicacion breve para entender caeda metodo: 
 #include "ascii_mapa.h"
 
 #include <iostream>
@@ -10,9 +6,8 @@
 #include <string>
 #include <algorithm>
 
-/* ------------------------------------------------------------------ */
-/* Utilidades internas                                                  */
-/* ------------------------------------------------------------------ */
+
+/* Utilidades internas del proyecto:                                         */
 
 /* Busca una estacion por abreviatura en el vector */
 static const DatoEstacion *buscarEstacion(

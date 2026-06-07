@@ -50,4 +50,4 @@ void dibujar_minimapa(const std::string &nombre_estacion,
                       const std::vector<DatoVehiculo> &vehiculos,
                       int id_vehiculo_usuario = 0);
 
-#endif /* ASCII_MAPA_H */
+#endif 
