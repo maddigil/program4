@@ -8,15 +8,15 @@
 
 #ifndef ASCII_MAPA_H
 #define ASCII_MAPA_H
-
+using namespace std;
 #include <string>
 #include <vector>
 
 // Datos de estacion
 struct DatoEstacion {
     int         id;
-    std::string abrev;
-    std::string nombre;
+   string abrev;
+    string nombre;
     int         plazas;
     int         disponibles;
 };
@@ -25,17 +25,17 @@ struct DatoEstacion {
 struct DatoVehiculo {
     int         id;
     //"disponible", "en_uso", "averiado"
-    std::string estado;   
+    string estado;   
     float       bateria;
 };
 
 
-void dibujar_mapa_grande(const std::vector<DatoEstacion> &estaciones,
+void dibujar_mapa_grande(const vector<DatoEstacion> &estaciones,
                           int id_vehiculo_usuario = 0);
 
 
-void dibujar_minimapa(const std::string &nombre_estacion,
-                      const std::vector<DatoVehiculo> &vehiculos,
+void dibujar_minimapa(const string &nombre_estacion,
+                      const vector<DatoVehiculo> &vehiculos,
                       int id_vehiculo_usuario = 0);
 
 #endif 
