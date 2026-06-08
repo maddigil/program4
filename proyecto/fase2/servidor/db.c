@@ -2,6 +2,25 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
+
+/* Genera una contraseña única por usuario: primeras 4 letras ASCII del nombre
+ * (en minúsculas, sin tildes ni espacios) seguidas del id_usuario.
+ * Ejemplo: nombre="Roberto Ruiz", id=1  -> "robe1"
+ *          nombre="Elena Ramos",  id=6  -> "elen6"
+ */
+static void generar_contrasenya(int id, const char *nombre, char *out) {
+    char letras[5] = {0};
+    int pos = 0;
+    for (int i = 0; nombre[i] != '\0' && pos < 4; i++) {
+        unsigned char c = (unsigned char)nombre[i];
+        if (c < 128 && isalpha(c)) {
+            letras[pos++] = (char)tolower(c);
+        }
+    }
+    letras[pos] = '\0';
+    snprintf(out, 16, "%s%d", letras, id);
+}
 
 sqlite3* abrir_baseDatos(const char *ruta){
     sqlite3 *db;
@@ -34,7 +53,7 @@ int crearTablas(sqlite3 *db){
         "CREATE TABLE IF NOT EXISTS Usuario ("
         "  id_usuario INTEGER PRIMARY KEY,"
         "  nombre TEXT NOT NULL,"
-        "  contrasenya TEXT NOT NULL DEFAULT '1234',"
+        "  contrasenya TEXT NOT NULL DEFAULT '',"
         "  vehiculo_activo INTEGER DEFAULT 0"
         ");"
         "CREATE TABLE IF NOT EXISTS Averia ("
@@ -124,7 +143,7 @@ int cargar_usuarios(sqlite3 *db, const char *csv){
 
     char linea[256];
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO Usuario VALUES(?,?, '1234',0);", -1, &stmt, NULL);
+    sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO Usuario VALUES(?,?,?,0);", -1, &stmt, NULL);
     int contador = 0;
 
     while(fgets(linea, sizeof(linea), fd)){
@@ -134,8 +153,11 @@ int cargar_usuarios(sqlite3 *db, const char *csv){
         char nombre[100];
 
         if(sscanf(linea, "%d,%99[^,\n]", &id, nombre) == 2){
+            char contrasenya[16];
+            generar_contrasenya(id, nombre, contrasenya);
             sqlite3_bind_int(stmt, 1, id);
             sqlite3_bind_text(stmt, 2, nombre, -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt, 3, contrasenya, -1, SQLITE_TRANSIENT);
             sqlite3_step(stmt);
             sqlite3_reset(stmt);
             contador++;
@@ -509,6 +531,7 @@ int listar_trayectosUsuario(sqlite3 *db, int id_usuario){
     printf("%d trayectos encontrados\n", contador);
     return contador;
 }
+
 void mapa_grande(sqlite3 *db){
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db, "SELECT e.abreviacion, e.plazas, COUNT(v.id_vehiculo) FROM Estacion e "
