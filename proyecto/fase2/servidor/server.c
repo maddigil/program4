@@ -147,6 +147,9 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
         return 0;
     }
 
+    printf("[DEBUG] Usuario: '%s' | Contrasena BD: '%s' | Contrasena introducida: '%s'\n",
+           u.nombre, u.contrasenya, clave);
+
     if (strcmp(u.contrasenya, clave) != 0) {
         net_error(fd, "Contrasena incorrecta");
         return 0;

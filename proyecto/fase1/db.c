@@ -545,6 +545,7 @@ void mapa_grande(sqlite3 *db){
             int plazas=sqlite3_column_int(stmt,1);
             int vehiculos=sqlite3_column_int(stmt,2);
             printf("Estacion %s con %d vehiculos y %d plazas  \n",abreviacion,plazas,vehiculos);
+
     }
     sqlite3_finalize(stmt);
 }
@@ -562,6 +563,7 @@ void mapa_pequenyo(sqlite3 *db){
             int plazas=sqlite3_column_int(stmt,1);
             int vehiculos=sqlite3_column_int(stmt,2);
             printf("[%s] %d %d\n",abreviacion,plazas,vehiculos);
+
     }
     sqlite3_finalize(stmt);
 }
