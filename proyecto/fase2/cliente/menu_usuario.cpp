@@ -6,34 +6,34 @@
 #include <sstream>
 #include <vector>
 #include <string>
+using namespace std;
 
-
-static std::vector<std::string> split(const std::string& linea, char sep = '|') {
-    std::vector<std::string> campos;
-    std::stringstream ss(linea);
-    std::string campo;
-    while (std::getline(ss, campo, sep)) campos.push_back(campo);
+static vector<std::string> split(const string& linea, char sep = '|') {
+    vector<std::string> campos;
+    stringstream ss(linea);
+    string campo;
+    while (getline(ss, campo, sep)) campos.push_back(campo);
     return campos;
 }
 
-static EstacionCache parseEstacion(const std::string& linea) {
+static EstacionCache parseEstacion(const string& linea) {
     auto f = split(linea);
     EstacionCache e{};
     if (f.size() >= 5) {
-        e.id              = std::stoi(f[0]);
+        e.id              = stoi(f[0]);
         e.codigo          = f[1];
         e.nombre          = f[2];
-        e.total_vehiculos = std::stoi(f[3]);
-        e.disponibles     = std::stoi(f[4]);
+        e.total_vehiculos = stoi(f[3]);
+        e.disponibles     = stoi(f[4]);
     }
     return e;
 }
 
-static VehiculoCache parseVehiculo(const std::string& linea, int id_vehiculo_activo) {
+static VehiculoCache parseVehiculo(const string& linea, int id_vehiculo_activo) {
     auto f = split(linea);
     VehiculoCache v{};
     if (f.size() >= 3) {
-        v.id          = std::stoi(f[0]);
+        v.id          = stoi(f[0]);
         v.estado      = f[1];
         v.matricula   = "";
         v.id_estacion = 0;
@@ -44,13 +44,13 @@ static VehiculoCache parseVehiculo(const std::string& linea, int id_vehiculo_act
 
 
 MenuUsuario::MenuUsuario(Cliente& cli, int id_usuario,
-                         const std::string& nombre_usuario)
+                         const string& nombre_usuario)
     : cli_(cli),
       id_usuario_(id_usuario),
       nombre_usuario_(nombre_usuario),
       id_vehiculo_activo_(-1),
       id_trayecto_activo_(-1),
-      cache_(std::make_unique<CacheManager>())
+      cache_(make_unique<CacheManager>())
 {}
 
 MenuUsuario::~MenuUsuario() = default;
@@ -73,61 +73,61 @@ void MenuUsuario::ejecutar() {
              cli_.leerLinea();
             return;
             default:
-                std::cout << "Opcion no valida.\n";
+                cout << "Opcion no valida.\n";
         }
     }
 }
 
 
 void MenuUsuario::mostrarMenu() const {
-    std::cout << "\n+=================================+\n";
-    std::cout << "|  EUSKOKAR - Menu usuario        |\n";
-    std::cout << "|  Sesion: " << nombre_usuario_;
+    cout << "\n+=================================+\n";
+    cout << "|  EUSKOKAR - Menu usuario        |\n";
+    cout << "|  Sesion: " << nombre_usuario_;
     int pad = 22 - (int)nombre_usuario_.size();
-    for (int i = 0; i < pad; ++i) std::cout << ' ';
-    std::cout << "|\n";
-    std::cout << "+=================================+\n";
-    std::cout << " 1. Ver mapa de Gipuzkoa\n";
-    std::cout << " 2. Ver estacion concreta (minimapa)\n";
-    std::cout << " 3. Reservar un vehiculo\n";
-    std::cout << " 4. Desbloquear / iniciar trayecto\n";
-    std::cout << " 5. Finalizar trayecto activo\n";
-    std::cout << " 6. Reportar averia\n";
-    std::cout << " 7. Ver mi historial de trayectos\n";
-    std::cout << " 0. Salir\n";
-    std::cout << "Opcion: ";
+    for (int i = 0; i < pad; ++i) cout << ' ';
+    cout << "|\n";
+    cout << "+=================================+\n";
+    cout << " 1. Ver mapa de Gipuzkoa\n";
+    cout << " 2. Ver estacion concreta (minimapa)\n";
+    cout << " 3. Reservar un vehiculo\n";
+    cout << " 4. Desbloquear / iniciar trayecto\n";
+    cout << " 5. Finalizar trayecto activo\n";
+    cout << " 6. Reportar averia\n";
+    cout << " 7. Ver mi historial de trayectos\n";
+    cout << " 0. Salir\n";
+    cout << "Opcion: ";
     if (id_vehiculo_reservado_ != -1) {
-        std::cout << " ! Tienes una reserva activa (Vehiculo: " << id_vehiculo_reservado_ << ")\n";
+        cout << " ! Tienes una reserva activa (Vehiculo: " << id_vehiculo_reservado_ << ")\n";
     }
 }
 
 int MenuUsuario::leerOpcion() const {
     int op;
-    std::cin >> op;
-    std::cin.ignore();
+    cin >> op;
+    cin.ignore();
     return op;
 }
 
 
 void MenuUsuario::opcionMapa() {
-    std::vector<EstacionCache> estaciones;
+    vector<EstacionCache> estaciones;
 
     if (cache_->estacionesValidas()) {
-        std::cout << "[cache] Usando datos en cache...\n";
+        cout << "[cache] Usando datos en cache...\n";
         estaciones = cache_->getEstaciones();
     } else {
-        std::cout << "Consultando servidor...\n";
+        cout << "Consultando servidor...\n";
         cli_.enviarComando("LISTAR_EST");
-        std::vector<std::string> lineas = cli_.leerLista();
+        vector<string> lineas = cli_.leerLista();
         if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
-            std::cout << lineas[0] << "\n"; return;
+            cout << lineas[0] << "\n"; return;
         }
         for (const auto& l : lineas)
             if (!l.empty()) estaciones.push_back(parseEstacion(l));
         cache_->actualizarEstaciones(estaciones);
     }
 
-    std::vector<DatoEstacion> datos;
+    vector<DatoEstacion> datos;
     for (const auto& e : estaciones) {
         DatoEstacion d;
         d.id          = e.id;
@@ -142,42 +142,42 @@ void MenuUsuario::opcionMapa() {
 
 
 void MenuUsuario::opcionEstacion() {
-    std::vector<EstacionCache> estaciones;
+   vector<EstacionCache> estaciones;
     if (cache_->estacionesValidas()) {
         estaciones = cache_->getEstaciones();
     } else {
-        std::cout << "Consultando estaciones...\n";
+        cout << "Consultando estaciones...\n";
         cli_.enviarComando("LISTAR_EST");
-        std::vector<std::string> lineas = cli_.leerLista();
+        vector<string> lineas = cli_.leerLista();
         if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
-            std::cout << lineas[0] << "\n"; return;
+            cout << lineas[0] << "\n"; return;
         }
         for (const auto& l : lineas)
             if (!l.empty()) estaciones.push_back(parseEstacion(l));
         cache_->actualizarEstaciones(estaciones);
     }
 
-    std::cout << "\nEstaciones disponibles:\n";
+    cout << "\nEstaciones disponibles:\n";
     for (const auto& e : estaciones)
-        std::cout << "  " << e.id << ". " << e.nombre
+        cout << "  " << e.id << ". " << e.nombre
                   << " [" << e.disponibles << "/" << e.total_vehiculos << " libres]\n";
 
-    std::cout << "ID de estacion (0 para volver): ";
+    cout << "ID de estacion (0 para volver): ";
     int id_est;
-    std::cin >> id_est;
-    std::cin.ignore();
+    cin >> id_est;
+    cin.ignore();
     if (id_est <= 0) return;
 
-    std::vector<VehiculoCache> vehiculos;
+    vector<VehiculoCache> vehiculos;
     if (cache_->vehiculosValidos(id_est)) {
-        std::cout << "[cache] Usando vehiculos en cache...\n";
+        cout << "[cache] Usando vehiculos en cache...\n";
         vehiculos = cache_->getVehiculos(id_est);
     } else {
-        std::cout << "Consultando vehiculos...\n";
-        cli_.enviarComando("VEH_ESTACION " + std::to_string(id_est));
-        std::vector<std::string> lineas = cli_.leerLista();
+        cout << "Consultando vehiculos...\n";
+        cli_.enviarComando("VEH_ESTACION " + to_string(id_est));
+        vector<string> lineas = cli_.leerLista();
         if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
-            std::cout << lineas[0] << "\n"; return;
+           cout << lineas[0] << "\n"; return;
         }
         for (const auto& l : lineas)
             if (!l.empty())
@@ -185,11 +185,11 @@ void MenuUsuario::opcionEstacion() {
         cache_->actualizarVehiculos(id_est, vehiculos);
     }
 
-    std::string nombre_est = "Estacion " + std::to_string(id_est);
+    string nombre_est = "Estacion " + to_string(id_est);
     for (const auto& e : estaciones)
         if (e.id == id_est) { nombre_est = e.nombre; break; }
 
-    std::vector<DatoVehiculo> datos;
+    vector<DatoVehiculo> datos;
     for (const auto& v : vehiculos) {
         DatoVehiculo d;
         d.id      = v.id;
@@ -203,64 +203,64 @@ void MenuUsuario::opcionEstacion() {
 
 
 void MenuUsuario::opcionReservar() {
-    std::cout << "ID del vehiculo a reservar: ";
+    cout << "ID del vehiculo a reservar: ";
     int id_veh;
-    std::cin >> id_veh;
-    std::cin.ignore();
+    cin >> id_veh;
+    cin.ignore();
 
-    cli_.enviarComando("RESERVAR " + std::to_string(id_veh));
-    std::string resp = cli_.leerLinea();
+    cli_.enviarComando("RESERVAR " + to_string(id_veh));
+    string resp = cli_.leerLinea();
     
     if (resp.rfind("OK", 0) == 0) {
         id_vehiculo_reservado_ = id_veh; // para guardar el estado
         cache_->invalidarTodo();
-        std::cout << "Reserva confirmada para el vehiculo " << id_veh << "\n";
+       cout << "Reserva confirmada para el vehiculo " << id_veh << "\n";
     } else {
-        std::cout << "Error en reserva: " << resp << "\n";
+        cout << "Error en reserva: " << resp << "\n";
     }
 }
 
 
 void MenuUsuario::opcionUsarVehiculo() {
     if (id_vehiculo_activo_ != -1) {
-        std::cout << "Ya tienes un vehiculo activo (ID " << id_vehiculo_activo_
+        cout << "Ya tienes un vehiculo activo (ID " << id_vehiculo_activo_
                   << "). Finaliza el trayecto primero (opcion 5).\n";
         return;
     }
-    std::cout << "ID del vehiculo a desbloquear: ";
+    cout << "ID del vehiculo a desbloquear: ";
     int id_veh;
-    std::cin >> id_veh;
-    std::cin.ignore();
+    cin >> id_veh;
+    cin.ignore();
 
-    cli_.enviarComando("USAR_VEH " + std::to_string(id_veh));
-    std::string resp = cli_.leerLinea();
-    std::cout << resp << "\n";
+    cli_.enviarComando("USAR_VEH " + to_string(id_veh));
+    string resp = cli_.leerLinea();
+   cout << resp << "\n";
 
     if (resp.rfind("OK", 0) == 0) {
-        std::istringstream ss(resp);
-        std::string ok;
+        istringstream ss(resp);
+        string ok;
         ss >> ok >> id_trayecto_activo_;
         id_vehiculo_activo_ = id_veh;
         cache_->invalidarTodo();
-        std::cout << "Trayecto iniciado (ID " << id_trayecto_activo_ << "). Buen viaje!\n";
+        cout << "Trayecto iniciado (ID " << id_trayecto_activo_ << "). Buen viaje!\n";
     }
 }
 
 
 void MenuUsuario::opcionFinTrayecto() {
     if (id_trayecto_activo_ == -1) {
-        std::cout << "No tienes ningun trayecto activo.\n";
+        cout << "No tienes ningun trayecto activo.\n";
         return;
     }
-    std::cout << "Distancia recorrida (km): ";
+    cout << "Distancia recorrida (km): ";
     double dist;
-    std::cin >> dist;
-    std::cin.ignore();
+    cin >> dist;
+    cin.ignore();
 
-    cli_.enviarComando("FIN_TRAYECTO " + std::to_string(id_trayecto_activo_)
-                       + " " + std::to_string(dist));
-    std::string resp = cli_.leerLinea();
-    std::cout << resp << "\n";
+    cli_.enviarComando("FIN_TRAYECTO " + to_string(id_trayecto_activo_)
+                       + " " + to_string(dist));
+    string resp = cli_.leerLinea();
+    cout << resp << "\n";
 
     if (resp.rfind("OK", 0) == 0) {
         id_vehiculo_activo_ = -1;
@@ -271,26 +271,26 @@ void MenuUsuario::opcionFinTrayecto() {
 
 
 void MenuUsuario::opcionReportarAveria() {
-    std::cout << "ID del vehiculo averiado: ";
+    cout << "ID del vehiculo averiado: ";
     int id_veh;
-    std::cin >> id_veh;
-    std::cin.ignore();
+    cin >> id_veh;
+    cin.ignore();
 
-    std::cout << "Tipo de averia (ej: neumatico, motor, frenos): ";
-    std::string tipo;
-    std::getline(std::cin, tipo);
+    cout << "Tipo de averia (ej: neumatico, motor, frenos): ";
+    string tipo;
+    getline(cin, tipo);
 
-    std::cout << "Descripcion: ";
-    std::string desc;
-    std::getline(std::cin, desc);
+    cout << "Descripcion: ";
+    string desc;
+    getline(cin, desc);
 
     for (auto& c : tipo) if (c == ' ') c = '_';
     for (auto& c : desc) if (c == ' ') c = '_';
 
-    cli_.enviarComando("REPORTAR_AV " + std::to_string(id_veh)
+    cli_.enviarComando("REPORTAR_AV " + to_string(id_veh)
                        + " " + tipo + " " + desc);
-    std::string resp = cli_.leerLinea();
-    std::cout << resp << "\n";
+    string resp = cli_.leerLinea();
+    cout << resp << "\n";
 
     if (resp.rfind("OK", 0) == 0)
         cache_->invalidarTodo();
@@ -299,32 +299,32 @@ void MenuUsuario::opcionReportarAveria() {
 
 void MenuUsuario::opcionHistorial() {
     cli_.enviarComando("HISTORIAL");
-    std::vector<std::string> lineas = cli_.leerLista();
+    vector<string> lineas = cli_.leerLista();
     if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
-        std::cout << lineas[0] << "\n"; return;
+        cout << lineas[0] << "\n"; return;
     }
 
-    std::cout << "\n--- Historial de trayectos (ultimos 20) ---\n";
-    std::cout << std::left;
-    std::cout.width(6);  std::cout << "ID";
-    std::cout.width(6);  std::cout << "Veh";
-    std::cout.width(22); std::cout << "Inicio";
-    std::cout.width(22); std::cout << "Fin";
-    std::cout.width(8);  std::cout << "Km";
-    std::cout << "\n" << std::string(64, '-') << "\n";
+    cout << "\n--- Historial de trayectos (ultimos 20) ---\n";
+    cout << left;
+    cout.width(6);  cout << "ID";
+    cout.width(6);  cout << "Veh";
+    cout.width(22); cout << "Inicio";
+    cout.width(22); cout << "Fin";
+    cout.width(8);  cout << "Km";
+    cout << "\n" << string(64, '-') << "\n";
 
     for (const auto& l : lineas) {
         if (l.empty()) continue;
         auto f = split(l);
         if (f.size() >= 5) {
-            std::cout.width(6);  std::cout << f[0];   // id_trayecto
-            std::cout.width(6);  std::cout << f[1];   // vehiculo_id
-            std::cout.width(22); std::cout << f[2];   // inicio
-            std::cout.width(22); std::cout << f[3];   // fin
-            std::cout.width(8);  std::cout << f[4];   // distancia
-            std::cout << "\n";
+            cout.width(6);  cout << f[0];   // id_trayecto
+            cout.width(6);  cout << f[1];   // vehiculo_id
+            cout.width(22); cout << f[2];   // inicio
+            cout.width(22); cout << f[3];   // fin
+            cout.width(8);  cout << f[4];   // distancia
+            cout << "\n";
         } else {
-            std::cout << l << "\n";
+            cout << l << "\n";
         }
     }
 }
