@@ -6,40 +6,40 @@
 #include <string>
 #include <vector>
 #include "protocolo.h"
-
+using namespace std;
 class Cliente {
 public:
     Cliente();
     ~Cliente();
 
    
-    bool conectar(const std::string &ip, int puerto = PUERTO_DEFAULT);
+    bool conectar(const string &ip, int puerto = PUERTO_DEFAULT);
 
     void desconectar();
 
     bool conectado() const;
 
    
-    bool enviarComando(const std::string &cmd);
+    bool enviarComando(const string &cmd);
 
   
-    std::string leerLinea();
+    string leerLinea();
 
   
-    std::vector<std::string> leerLista();
+    vector<string> leerLista();
 
  
-    static bool esOk(const std::string &linea);
+    static bool esOk(const string &linea);
 
 
-    static std::string valorOk(const std::string &linea);
+    static string valorOk(const string &linea);
 
-    static std::string mensajeError(const std::string &linea);
+    static string mensajeError(const string &linea);
 
 private:
     int  m_fd;          
     bool m_conectado;
-    std::string m_buffer; 
+    string m_buffer; 
 };
 
 #endif 
