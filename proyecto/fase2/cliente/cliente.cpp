@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <cstring>
-
+using namespace std;
 #ifdef _WIN32
   #include <winsock2.h>
   #include <windows.h>
@@ -27,10 +27,10 @@ Cliente::~Cliente() {
 #endif
 }
 
-bool Cliente::conectar(const std::string &ip, int puerto) {
+bool Cliente::conectar(const string &ip, int puerto) {
     m_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (m_fd < 0) {
-        std::cerr << "[CLIENTE] Error al crear el socket\n";
+        cerr << "[CLIENTE] Error al crear el socket\n";
         return false;
     }
 
@@ -41,14 +41,14 @@ bool Cliente::conectar(const std::string &ip, int puerto) {
 
     dir.sin_addr.s_addr = inet_addr(ip.c_str());
     if (dir.sin_addr.s_addr == INADDR_NONE) {
-        std::cerr << "[CLIENTE] IP invalida: " << ip << "\n";
+        cerr << "[CLIENTE] IP invalida: " << ip << "\n";
         close(m_fd);
         m_fd = -1;
         return false;
     }
 
     if (connect(m_fd, (struct sockaddr *)&dir, sizeof(dir)) < 0) {
-        std::cerr << "[CLIENTE] No se pudo conectar a "
+        cerr << "[CLIENTE] No se pudo conectar a "
                   << ip << ":" << puerto << "\n";
         close(m_fd);
         m_fd = -1;
@@ -57,8 +57,8 @@ bool Cliente::conectar(const std::string &ip, int puerto) {
 
     m_conectado = true;
 
-    std::string bienvenida = leerLinea();
-    std::cout << "[Servidor] " << bienvenida << "\n";
+    string bienvenida = leerLinea();
+    cout << "[Servidor] " << bienvenida << "\n";
 
     return true;
 }
@@ -75,19 +75,19 @@ bool Cliente::conectado() const {
     return m_conectado;
 }
 
-bool Cliente::enviarComando(const std::string &cmd) {
+bool Cliente::enviarComando(const string &cmd) {
     if (!m_conectado) return false;
-    std::string msg = cmd + "\n";
+    string msg = cmd + "\n";
     int enviados = send(m_fd, msg.c_str(), (int)msg.size(), 0);
     return enviados > 0;
 }
 
-std::string Cliente::leerLinea() {
-    std::string linea;
+string Cliente::leerLinea() {
+    string linea;
 
     while (true) {
         size_t pos = m_buffer.find('\n');
-        if (pos != std::string::npos) {
+        if (pos != string::npos) {
             linea    = m_buffer.substr(0, pos);
             m_buffer = m_buffer.substr(pos + 1);
             return linea;
@@ -104,17 +104,17 @@ std::string Cliente::leerLinea() {
     }
 }
 
-std::vector<std::string> Cliente::leerLista() {
-    std::vector<std::string> resultado;
+vector<string> Cliente::leerLista() {
+    vector<string> resultado;
 
-    std::string cabecera = leerLinea();
+    string cabecera = leerLinea();
     if (cabecera != RESP_OK) {
         resultado.push_back(cabecera);
         return resultado;
     }
 
     while (true) {
-        std::string linea = leerLinea();
+        string linea = leerLinea();
         if (linea == RESP_FIN || linea.empty()) break;
         resultado.push_back(linea);
     }
@@ -122,17 +122,17 @@ std::vector<std::string> Cliente::leerLista() {
     return resultado;
 }
 
-bool Cliente::esOk(const std::string &linea) {
+bool Cliente::esOk(const string &linea) {
     return linea.rfind("OK", 0) == 0;
 }
 
-std::string Cliente::valorOk(const std::string &linea) {
+string Cliente::valorOk(const string &linea) {
     if (linea.size() > 3)
         return linea.substr(3);
     return "";
 }
 
-std::string Cliente::mensajeError(const std::string &linea) {
+string Cliente::mensajeError(const string &linea) {
     if (linea.size() > 6)
         return linea.substr(6);
     return linea;
