@@ -23,7 +23,7 @@ int admin_login(const Config *cfg){
         /* Si el usuario pulsa Enter sin escribir nada, arrancar solo el servidor */
         if(usuario[0] == '\0') {
             printf("Modo servidor activo. Acceso admin omitido.\n");
-            return 1;
+            return 2;
         }
 
         leer_cadena(" Clave  : ", clave, MAX_VALOR);

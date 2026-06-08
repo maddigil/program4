@@ -75,7 +75,9 @@ int main(void) {
     printf("Iniciando sesion de administrador local...\n");
     printf("(Usuario admin: '%s' segun datos/config.cfg)\n\n", cfg.admin_usuario ? cfg.admin_usuario : "admin");
 
-    if (!admin_login(&cfg)) {
+    int login_result = admin_login(&cfg);
+
+    if (login_result == 0) {
         printf("Acceso denegado. El servidor sigue activo en segundo plano.\n");
 #ifdef _WIN32
         printf("Pulsa Ctrl+C para detener el servidor.\n");
@@ -89,7 +91,9 @@ int main(void) {
         return 1;
     }
 
-    admin_menu(db, &cfg);
+    if (login_result == 1) {
+        admin_menu(db, &cfg);
+    }
 
     /* Al salir del menu admin el servidor de sockets sigue activo */
     printf("\nSesion admin cerrada. El servidor sigue activo.\n");
