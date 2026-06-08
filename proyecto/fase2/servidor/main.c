@@ -89,6 +89,7 @@ int main(void) {
         return 1;
     }
 
+    admin_menu(db, &cfg);
 
     /* Al salir del menu admin el servidor de sockets sigue activo */
     printf("\nSesion admin cerrada. El servidor sigue activo.\n");
