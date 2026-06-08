@@ -1,6 +1,6 @@
 #include "cache_manager.h"
 #include <algorithm>
-
+using namespace std;
 
 
 CacheManager::CacheManager()
@@ -10,7 +10,7 @@ CacheManager::CacheManager()
 
 bool CacheManager::haExpirado(const Instante& ts) const {
     auto ahora  = Reloj::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(ahora - ts).count();
+    auto elapsed = chrono::duration_cast<chrono::seconds>(ahora - ts).count();
     return elapsed >= TTL_SEGUNDOS;
 }
 
@@ -33,13 +33,13 @@ bool CacheManager::estacionesValidas() const {
     return est_cargadas_ && !haExpirado(ts_estaciones_);
 }
 
-void CacheManager::actualizarEstaciones(const std::vector<EstacionCache>& lista) {
+void CacheManager::actualizarEstaciones(const vector<EstacionCache>& lista) {
     estaciones_    = lista;
     ts_estaciones_ = Reloj::now();
     est_cargadas_  = true;
 }
 
-const std::vector<EstacionCache>& CacheManager::getEstaciones() const {
+const vector<EstacionCache>& CacheManager::getEstaciones() const {
     return estaciones_;
 }
 
@@ -56,7 +56,7 @@ bool CacheManager::vehiculosValidos(int id_estacion) const {
 }
 
 void CacheManager::actualizarVehiculos(int id_estacion,
-                                       const std::vector<VehiculoCache>& lista) {
+                                       const vector<VehiculoCache>& lista) {
     EntradaVehiculos* e = buscarEntrada(id_estacion);
     if (e) {
         e->vehiculos  = lista;
@@ -70,7 +70,7 @@ void CacheManager::actualizarVehiculos(int id_estacion,
     }
 }
 
-std::vector<VehiculoCache> CacheManager::getVehiculos(int id_estacion) const {
+vector<VehiculoCache> CacheManager::getVehiculos(int id_estacion) const {
     const EntradaVehiculos* e = buscarEntrada(id_estacion);
     if (e) return e->vehiculos;
     return {};
@@ -78,7 +78,7 @@ std::vector<VehiculoCache> CacheManager::getVehiculos(int id_estacion) const {
 
 void CacheManager::invalidarVehiculos(int id_estacion) {
     cache_vehiculos_.erase(
-        std::remove_if(cache_vehiculos_.begin(), cache_vehiculos_.end(),
+        remove_if(cache_vehiculos_.begin(), cache_vehiculos_.end(),
             [id_estacion](const EntradaVehiculos& e) {
                 return e.id_estacion == id_estacion;
             }),
