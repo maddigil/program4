@@ -300,19 +300,21 @@ void MenuUsuario::opcionHistorial() {
     std::cout << "\n--- Historial de trayectos (ultimos 20) ---\n";
     std::cout << std::left;
     std::cout.width(6);  std::cout << "ID";
-    std::cout.width(20); std::cout << "Inicio";
-    std::cout.width(20); std::cout << "Fin";
-    std::cout.width(10); std::cout << "Km";
-    std::cout << "\n" << std::string(56, '-') << "\n";
+    std::cout.width(6);  std::cout << "Veh";
+    std::cout.width(22); std::cout << "Inicio";
+    std::cout.width(22); std::cout << "Fin";
+    std::cout.width(8);  std::cout << "Km";
+    std::cout << "\n" << std::string(64, '-') << "\n";
 
     for (const auto& l : lineas) {
         if (l.empty()) continue;
         auto f = split(l);
-        if (f.size() >= 4) {
-            std::cout.width(6);  std::cout << f[0];
-            std::cout.width(20); std::cout << f[1];
-            std::cout.width(20); std::cout << f[2];
-            std::cout.width(10); std::cout << f[3];
+        if (f.size() >= 5) {
+            std::cout.width(6);  std::cout << f[0];   // id_trayecto
+            std::cout.width(6);  std::cout << f[1];   // vehiculo_id
+            std::cout.width(22); std::cout << f[2];   // inicio
+            std::cout.width(22); std::cout << f[3];   // fin
+            std::cout.width(8);  std::cout << f[4];   // distancia
             std::cout << "\n";
         } else {
             std::cout << l << "\n";
