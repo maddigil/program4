@@ -16,9 +16,11 @@ struct EstacionCache {
 struct VehiculoCache {
     int    id;
     std::string matricula;
-    std::string estado;      // "libre", "en_uso", "averiado", "reservado"
+    // "libre", "en_uso", "averiado", "reservado"
+    std::string estado;      
     int    id_estacion;
-    bool   es_mio;           // true si es el vehiculo activo del usuario
+    // true si es el vehiculo activo del usuario
+    bool   es_mio;           
 };
 
 

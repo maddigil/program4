@@ -1,13 +1,4 @@
-/*
- * main_cliente.cpp
- * Punto de entrada del CLIENTE C++ de Euskokar.
- *
- * Pasos:
- *   1. Conectar al servidor (IP y puerto de config.cfg o por defecto)
- *   2. Pedir usuario y contraseña
- *   3. Enviar LOGIN al servidor
- *   4. Si OK, mostrar el menu de usuario
- */
+// Punto de entrada del CLIENTE C++ de Euskokar.
 
 #include <iostream>
 #include <fstream>
@@ -40,14 +31,13 @@ static std::string leerConfig(const std::string &fichero,
 }
 
 int main() {
-    /* ---- Banner ---- */
     std::cout << "\n";
     std::cout << " +================================+\n";
     std::cout << " |        EUSKOKAR  v1.0          |\n";
     std::cout << " |   Por un mundo mas sostenible  |\n";
     std::cout << " +================================+\n\n";
 
-    /* ---- Leer IP y puerto del servidor desde config.cfg ---- */
+    //Leer IP y puerto del servidor desde config.cfg
     std::string ip     = leerConfig("datos/config.cfg", "servidor_ip",    "127.0.0.1");
     std::string puerto_s = leerConfig("datos/config.cfg", "servidor_puerto",
                                       std::to_string(PUERTO_DEFAULT));
@@ -55,7 +45,7 @@ int main() {
 
     std::cout << " Conectando a " << ip << ":" << puerto << "...\n";
 
-    /* ---- Crear cliente y conectar ---- */
+    //Crear cliente y conectar
     Cliente cli;
     if (!cli.conectar(ip, puerto)) {
         std::cerr << "\n ERROR: No se pudo conectar al servidor.\n";
@@ -65,7 +55,7 @@ int main() {
 
     std::cout << " Conexion establecida.\n\n";
 
-    /* ---- Login (hasta 3 intentos) ---- */
+    //Login (hasta 3 intentos)
     int intentos = 3;
     bool logueado = false;
     int  id_usuario = -1;
@@ -79,12 +69,11 @@ int main() {
         std::cout << " Contrasena: ";
         std::getline(std::cin, clave);
 
-        /* Enviar LOGIN nombre clave */
-        cli.enviarComando(std::string(CMD_LOGIN) + " " + nombre + " " + clave);
+        //Enviar LOGIN 
+        cli.enviarComando(std::string(CMD_LOGIN) + " " + nombre + "|" + clave);
         std::string resp = cli.leerLinea();
 
         if (Cliente::esOk(resp)) {
-            /* Respuesta: "OK id_usuario nombre_usuario" */
             std::string valor = Cliente::valorOk(resp);
             size_t espacio = valor.find(' ');
             if (espacio != std::string::npos) {
@@ -108,7 +97,7 @@ int main() {
         return 1;
     }
 
-    /* ---- Menu principal del usuario ---- */
+    //Menu principal del usuario
     menu_principal(cli, id_usuario, nombre_usuario);
 
     std::cout << "\n Hasta pronto.\n\n";

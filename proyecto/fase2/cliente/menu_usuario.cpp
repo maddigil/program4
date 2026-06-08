@@ -32,11 +32,11 @@ static EstacionCache parseEstacion(const std::string& linea) {
 static VehiculoCache parseVehiculo(const std::string& linea, int id_vehiculo_activo) {
     auto f = split(linea);
     VehiculoCache v{};
-    if (f.size() >= 4) {
+    if (f.size() >= 3) {
         v.id          = std::stoi(f[0]);
-        v.matricula   = f[1];
-        v.estado      = f[2];
-        v.id_estacion = std::stoi(f[3]);
+        v.estado      = f[1];
+        v.matricula   = "";
+        v.id_estacion = 0;
         v.es_mio      = (v.id == id_vehiculo_activo);
     }
     return v;
@@ -116,9 +116,10 @@ void MenuUsuario::opcionMapa() {
     } else {
         std::cout << "Consultando servidor...\n";
         cli_.enviarComando("LISTAR_EST");
-        std::string primera = cli_.leerLinea();
-        if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
         std::vector<std::string> lineas = cli_.leerLista();
+        if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
+            std::cout << lineas[0] << "\n"; return;
+        }
         for (const auto& l : lineas)
             if (!l.empty()) estaciones.push_back(parseEstacion(l));
         cache_->actualizarEstaciones(estaciones);
@@ -145,9 +146,10 @@ void MenuUsuario::opcionEstacion() {
     } else {
         std::cout << "Consultando estaciones...\n";
         cli_.enviarComando("LISTAR_EST");
-        std::string primera = cli_.leerLinea();
-        if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
         std::vector<std::string> lineas = cli_.leerLista();
+        if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
+            std::cout << lineas[0] << "\n"; return;
+        }
         for (const auto& l : lineas)
             if (!l.empty()) estaciones.push_back(parseEstacion(l));
         cache_->actualizarEstaciones(estaciones);
@@ -171,9 +173,10 @@ void MenuUsuario::opcionEstacion() {
     } else {
         std::cout << "Consultando vehiculos...\n";
         cli_.enviarComando("VEH_ESTACION " + std::to_string(id_est));
-        std::string primera = cli_.leerLinea();
-        if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
         std::vector<std::string> lineas = cli_.leerLista();
+        if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
+            std::cout << lineas[0] << "\n"; return;
+        }
         for (const auto& l : lineas)
             if (!l.empty())
                 vehiculos.push_back(parseVehiculo(l, id_vehiculo_activo_));
@@ -189,7 +192,7 @@ void MenuUsuario::opcionEstacion() {
         DatoVehiculo d;
         d.id      = v.id;
         d.estado  = v.estado;
-        d.bateria = 0.0f; // el servidor no envia bateria en este comando
+        d.bateria = 0.0f;
         datos.push_back(d);
     }
     dibujar_minimapa(nombre_est, datos,
@@ -290,8 +293,10 @@ void MenuUsuario::opcionReportarAveria() {
 
 void MenuUsuario::opcionHistorial() {
     cli_.enviarComando("HISTORIAL");
-    std::string primera = cli_.leerLinea();
-    if (primera.rfind("ERROR", 0) == 0) { std::cout << primera << "\n"; return; }
+    std::vector<std::string> lineas = cli_.leerLista();
+    if (lineas.size() == 1 && lineas[0].rfind("ERROR", 0) == 0) {
+        std::cout << lineas[0] << "\n"; return;
+    }
 
     std::cout << "\n--- Historial de trayectos (ultimos 20) ---\n";
     std::cout << std::left;
@@ -301,7 +306,6 @@ void MenuUsuario::opcionHistorial() {
     std::cout.width(10); std::cout << "Km";
     std::cout << "\n" << std::string(56, '-') << "\n";
 
-    std::vector<std::string> lineas = cli_.leerLista();
     for (const auto& l : lineas) {
         if (l.empty()) continue;
         auto f = split(l);
