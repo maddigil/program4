@@ -96,6 +96,9 @@ void MenuUsuario::mostrarMenu() const {
     std::cout << " 7. Ver mi historial de trayectos\n";
     std::cout << " 0. Salir\n";
     std::cout << "Opcion: ";
+    if (id_vehiculo_reservado_ != -1) {
+        std::cout << " ! Tienes una reserva activa (Vehiculo: " << id_vehiculo_reservado_ << ")\n";
+    }
 }
 
 int MenuUsuario::leerOpcion() const {
@@ -207,10 +210,14 @@ void MenuUsuario::opcionReservar() {
 
     cli_.enviarComando("RESERVAR " + std::to_string(id_veh));
     std::string resp = cli_.leerLinea();
-    std::cout << resp << "\n";
-
-    if (resp.rfind("OK", 0) == 0)
+    
+    if (resp.rfind("OK", 0) == 0) {
+        id_vehiculo_reservado_ = id_veh; // Guardamos el estado
         cache_->invalidarTodo();
+        std::cout << "Reserva confirmada para el vehiculo " << id_veh << "\n";
+    } else {
+        std::cout << "Error en reserva: " << resp << "\n";
+    }
 }
 
 

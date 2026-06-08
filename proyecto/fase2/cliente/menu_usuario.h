@@ -19,6 +19,7 @@ private:
     int         id_vehiculo_activo_;
     int         id_trayecto_activo_;
     std::unique_ptr<CacheManager> cache_;
+    int id_vehiculo_reservado_;
 
     void mostrarMenu() const;
     int  leerOpcion()  const;
