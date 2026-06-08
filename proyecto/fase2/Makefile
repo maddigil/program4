@@ -30,15 +30,15 @@ CLI_SRCS = cliente/main_cliente.cpp \
 SRV_OBJS = $(SRV_SRCS:.c=.o)
 CLI_OBJS = $(CLI_SRCS:.cpp=.o)
 
-.PHONY: all servidor cliente clean help
+.PHONY: all servidor.out cliente.out clean help
 
-all: servidor cliente
+all: servidor.out cliente.out
 
-servidor: $(SRV_OBJS)
-	$(CC) $(CFLAGS) -o servidor $(SRV_OBJS) -ldl -lm
+servidor.out: $(SRV_OBJS)
+	$(CC) $(CFLAGS) -o servidor.out $(SRV_OBJS) -ldl -lm
 
-cliente: $(CLI_OBJS)
-	$(CXX) $(CXXFLAGS) -o cliente $(CLI_OBJS)
+cliente.out: $(CLI_OBJS)
+	$(CXX) $(CXXFLAGS) -o cliente.out $(CLI_OBJS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -47,15 +47,15 @@ cliente: $(CLI_OBJS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f servidor/*.o cliente/*.o servidor cliente
+	rm -f servidor/*.o cliente/*.o servidor.out cliente.out
 
 help:
 	@echo "Comandos disponibles:"
-	@echo "  make          -> compila servidor y cliente"
-	@echo "  make servidor -> solo el servidor"
-	@echo "  make cliente  -> solo el cliente"
-	@echo "  make clean    -> limpia ejecutables y objetos"
+	@echo "  make           -> compila servidor y cliente"
+	@echo "  make servidor.out -> solo el servidor"
+	@echo "  make cliente.out  -> solo el cliente"
+	@echo "  make clean     -> limpia ejecutables y objetos"
 	@echo ""
 	@echo "Para ejecutar:"
-	@echo "  Terminal 1: ./servidor"
-	@echo "  Terminal 2: ./cliente"
+	@echo "  Terminal 1: ./servidor.out"
+	@echo "  Terminal 2: ./cliente.out"
