@@ -1,3 +1,4 @@
+//en comentarios explicacion breve para entender cada metodo:
 #include "ascii_mapa.h"
 
 #include <iostream>
@@ -6,7 +7,9 @@
 #include <algorithm>
 
 
-// busca una estacion por abreviatura
+/* Utilidades internas del proyecto:                                         */
+
+/* Busca una estacion por abreviatura en el vector */
 static const DatoEstacion *buscarEstacion(
         const std::vector<DatoEstacion> &ests,
         const std::string &abrev) {
@@ -16,16 +19,18 @@ static const DatoEstacion *buscarEstacion(
     return nullptr;
 }
 
-
- // Devuelve el simbolo ASCII segun el estado de la estacion:
- // ● si tiene vehiculos disponibles
- // X si no tiene ninguno o todos averiados
+/*
+ * simboloEstacion(e)
+ * Devuelve el simbolo ASCII segun el estado de la estacion:
+ *   * si tiene vehiculos disponibles
+ *   X si no tiene ninguno o todos averiados
+ */
 static std::string simboloEstacion(const DatoEstacion *e) {
     if (!e) return "?";
-    return (e->disponibles > 0) ? "●" : "X";
+    return (e->disponibles > 0) ? "*" : "X";
 }
 
-//Formatea una celda del mapa grande: "(AB)●" */
+/* Formatea una celda del mapa grande: "(AB)*" */
 static std::string celda(const std::vector<DatoEstacion> &ests,
                           const std::string &abrev) {
     const DatoEstacion *e = buscarEstacion(ests, abrev);
@@ -33,19 +38,20 @@ static std::string celda(const std::vector<DatoEstacion> &ests,
     return "(" + abrev + ")" + sim;
 }
 
-// Mapa grande de Gipuzkoa                                             */
-
+/* ------------------------------------------------------------------ */
+/* Mapa grande de Gipuzkoa                                             */
+/* ------------------------------------------------------------------ */
 void dibujar_mapa_grande(const std::vector<DatoEstacion> &estaciones,
                           int /*id_vehiculo_usuario*/) {
 
     std::cout << "\n";
     std::cout << " +=========================================================+\n";
     std::cout << " |           MAPA EUSKOKAR - GIPUZKOA                      |\n";
-    std::cout << " |   ● disponible   X sin vehiculos / averiada             |\n";
+    std::cout << " |   * disponible   X sin vehiculos / averiada             |\n";
     std::cout << " +=========================================================+\n";
     std::cout << " |                                                         |\n";
 
-    //Fila 1: costa norte (Zarautz, Donostia, Errenteria, Hondarribia) 
+    /* Fila 1: costa norte (Zarautz, Donostia, Errenteria, Hondarribia) */
     std::cout << " |  "
               << std::left << std::setw(8) << celda(estaciones, "Z")
               << std::setw(8) << celda(estaciones, "DC")
@@ -54,7 +60,7 @@ void dibujar_mapa_grande(const std::vector<DatoEstacion> &estaciones,
               << std::setw(8) << celda(estaciones, "H")
               << "       |\n";
 
-    //Fila 2: zona costera interior
+    /* Fila 2: zona costera interior */
     std::cout << " |  "
               << std::setw(8) << celda(estaciones, "DA")
               << std::setw(8) << celda(estaciones, "DA2")
@@ -64,14 +70,14 @@ void dibujar_mapa_grande(const std::vector<DatoEstacion> &estaciones,
 
     std::cout << " |                                                         |\n";
 
-    // Fila 3: zona interior norte
+    /* Fila 3: zona interior norte */
     std::cout << " |     "
               << std::setw(8) << celda(estaciones, "U")
               << std::setw(8) << celda(estaciones, "T")
               << std::setw(8) << celda(estaciones, "EB")
               << "                    |\n";
 
-    //Fila 4: zona interior
+    /* Fila 4: zona interior */
     std::cout << " |     "
               << std::setw(8) << celda(estaciones, "A")
               << std::setw(8) << celda(estaciones, "L")
@@ -79,7 +85,7 @@ void dibujar_mapa_grande(const std::vector<DatoEstacion> &estaciones,
               << std::setw(8) << celda(estaciones, "O")
               << "          |\n";
 
-    //Fila 5: sur 
+    /* Fila 5: sur */
     std::cout << " |        "
               << std::setw(8) << celda(estaciones, "B")
               << std::setw(8) << celda(estaciones, "S")
@@ -89,26 +95,28 @@ void dibujar_mapa_grande(const std::vector<DatoEstacion> &estaciones,
     std::cout << " |                                                         |\n";
     std::cout << " +=========================================================+\n\n";
 
+    /* Leyenda con conteos */
     int total_disp = 0, total_est = (int)estaciones.size();
     for (const auto &e : estaciones) total_disp += e.disponibles;
     std::cout << " Estaciones: " << total_est
               << "   Vehiculos disponibles: " << total_disp << "\n\n";
 }
 
-// Minimapa de una estacion                                            
+/* ------------------------------------------------------------------ */
 
 void dibujar_minimapa(const std::string &nombre_estacion,
                       const std::vector<DatoVehiculo> &vehiculos,
                       int id_vehiculo_usuario) {
 
-    //Calcular el ancho del marco segun el numero de vehiculos
+    /* Calcular el ancho del marco segun el numero de vehiculos */
     int n = (int)vehiculos.size();
     int ancho = std::max(30, n * 7 + 4);
 
+    /* Linea superior */
     std::string borde(ancho, '=');
     std::cout << "\n ╔" << borde << "╗\n";
 
-    //Nombre de la estacion (centrado)
+    /* Nombre de la estacion (centrado) */
     std::string titulo = " Estacion: " + nombre_estacion + " ";
     int pad = (ancho - (int)titulo.size()) / 2;
     std::cout << " ║" << std::string(pad, ' ') << titulo
@@ -116,7 +124,7 @@ void dibujar_minimapa(const std::string &nombre_estacion,
 
     std::cout << " ║" << std::string(ancho, '-') << "║\n";
 
-    //Fila de vehiculos
+    /* Fila de vehiculos */
     std::string fila_vehiculos = " ";
     int disp = 0, av = 0, en_uso = 0;
 
@@ -130,7 +138,7 @@ void dibujar_minimapa(const std::string &nombre_estacion,
         } else if (v.estado == "averiado") {
             celda_v = "[ X" + std::to_string(v.id) + " ]";
             av++;
-        } else { 
+        } else { /* en_uso */
             celda_v = "[ ~" + std::to_string(v.id) + " ]";
             en_uso++;
         }
@@ -141,26 +149,28 @@ void dibujar_minimapa(const std::string &nombre_estacion,
         fila_vehiculos = " (Sin vehiculos asignados a esta estacion)";
     }
 
+    /* Centrar la fila */
     int fpad = (ancho - (int)fila_vehiculos.size()) / 2;
     if (fpad < 0) fpad = 0;
     std::cout << " ║" << std::string(fpad, ' ') << fila_vehiculos
               << std::string(std::max(0, ancho - fpad - (int)fila_vehiculos.size()), ' ')
               << "║\n";
 
+    /* Leyenda */
     std::cout << " ║" << std::string(ancho, '-') << "║\n";
     std::string leyenda = " [V]=libre [~]=en uso [X]=averiado [*V*]=tuyo ";
     std::cout << " ║" << leyenda
               << std::string(std::max(0, ancho - (int)leyenda.size()), ' ')
               << "║\n";
 
-    //Estadisticas 
+    /* Estadisticas */
     std::string stats = " Disp:" + std::to_string(disp) +
                         " EnUso:" + std::to_string(en_uso) +
                         " Averiados:" + std::to_string(av) + " ";
     std::cout << " ║" << stats
               << std::string(std::max(0, ancho - (int)stats.size()), ' ')
               << "║\n";
-              
 
+    /* Linea inferior */
     std::cout << " ╚" << borde << "╝\n\n";
 }
