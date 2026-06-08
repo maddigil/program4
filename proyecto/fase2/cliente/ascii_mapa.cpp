@@ -102,75 +102,95 @@ void dibujar_mapa_grande(const std::vector<DatoEstacion> &estaciones,
               << "   Vehiculos disponibles: " << total_disp << "\n\n";
 }
 
-/* ------------------------------------------------------------------ */
 
 void dibujar_minimapa(const std::string &nombre_estacion,
                       const std::vector<DatoVehiculo> &vehiculos,
                       int id_vehiculo_usuario) {
 
-    /* Calcular el ancho del marco segun el numero de vehiculos */
-    int n = (int)vehiculos.size();
-    int ancho = std::max(30, n * 7 + 4);
-
-    /* Linea superior */
-    std::string borde(ancho, '=');
-    std::cout << "\n ╔" << borde << "╗\n";
-
-    /* Nombre de la estacion (centrado) */
-    std::string titulo = " Estacion: " + nombre_estacion + " ";
-    int pad = (ancho - (int)titulo.size()) / 2;
-    std::cout << " ║" << std::string(pad, ' ') << titulo
-              << std::string(ancho - pad - (int)titulo.size(), ' ') << "║\n";
-
-    std::cout << " ║" << std::string(ancho, '-') << "║\n";
-
-    /* Fila de vehiculos */
-    std::string fila_vehiculos = " ";
+    /* --- Construir celdas de vehiculos --- */
     int disp = 0, av = 0, en_uso = 0;
+    std::vector<std::string> celdas;
 
     for (const auto &v : vehiculos) {
-        std::string celda_v;
+        std::string c;
         if (v.id == id_vehiculo_usuario) {
-            celda_v = "[*V" + std::to_string(v.id) + "*]";
+            c = "[*" + std::to_string(v.id) + "*]";
         } else if (v.estado == "disponible") {
-            celda_v = "[ V" + std::to_string(v.id) + " ]";
+            c = "[ " + std::to_string(v.id) + " ]";
             disp++;
         } else if (v.estado == "averiado") {
-            celda_v = "[ X" + std::to_string(v.id) + " ]";
+            c = "[X" + std::to_string(v.id) + "X]";
             av++;
         } else { /* en_uso */
-            celda_v = "[ ~" + std::to_string(v.id) + " ]";
+            c = "[~" + std::to_string(v.id) + "~]";
             en_uso++;
         }
-        fila_vehiculos += celda_v;
+        celdas.push_back(c);
     }
 
-    if (vehiculos.empty()) {
-        fila_vehiculos = " (Sin vehiculos asignados a esta estacion)";
+    /* --- Calcular ancho necesario --- */
+    // Minimo 36; crece si hay muchos vehiculos o el nombre es largo
+    int ancho_vehiculos = 0;
+    for (const auto &c : celdas) ancho_vehiculos += (int)c.size() + 1;
+    if (ancho_vehiculos > 0) ancho_vehiculos--; // quitar espacio final
+
+    std::string titulo = " Estacion: " + nombre_estacion + " ";
+    std::string leyenda  = " [V]=libre [~]=uso [X]=averiado [*]=tuyo ";
+    std::string stats_s  = " Disp:" + std::to_string(disp)
+                         + " En uso:" + std::to_string(en_uso)
+                         + " Averiados:" + std::to_string(av) + " ";
+
+    int ancho = 36;
+    for (const auto *s : {&titulo, &leyenda, &stats_s})
+        if ((int)s->size() > ancho) ancho = (int)s->size();
+    if (ancho_vehiculos > ancho) ancho = ancho_vehiculos;
+
+    /* --- Helpers de impresion --- */
+    auto borde = [&](char c){ std::cout << " +" << std::string(ancho, c) << "+\n"; };
+
+    // Imprime una linea con bordes | y relleno a la derecha
+    auto linea_izq = [&](const std::string &texto) {
+        int pad = ancho - (int)texto.size();
+        if (pad < 0) pad = 0;
+        std::cout << " |" << texto << std::string(pad, ' ') << "|\n";
+    };
+
+    // Imprime texto centrado entre bordes |
+    auto linea_centro = [&](const std::string &texto) {
+        int pad_total = ancho - (int)texto.size();
+        int pad_l = pad_total / 2;
+        int pad_r = pad_total - pad_l;
+        if (pad_l < 0) pad_l = 0;
+        if (pad_r < 0) pad_r = 0;
+        std::cout << " |" << std::string(pad_l, ' ') << texto
+                  << std::string(pad_r, ' ') << "|\n";
+    };
+
+    /* --- Dibujar marco --- */
+    std::cout << "\n";
+    borde('=');
+    linea_centro(titulo);
+    borde('-');
+
+    if (celdas.empty()) {
+        linea_centro("(Sin vehiculos en esta estacion)");
+    } else {
+        // Agrupar en filas de maximo 8 vehiculos
+        const int POR_FILA = 8;
+        for (int i = 0; i < (int)celdas.size(); i += POR_FILA) {
+            std::string fila;
+            for (int j = i; j < (int)celdas.size() && j < i + POR_FILA; ++j) {
+                if (j > i) fila += ' ';
+                fila += celdas[j];
+            }
+            // Ajustar ancho si esta fila es mas larga (caso borde calculado mal)
+            linea_centro(fila);
+        }
     }
 
-    /* Centrar la fila */
-    int fpad = (ancho - (int)fila_vehiculos.size()) / 2;
-    if (fpad < 0) fpad = 0;
-    std::cout << " ║" << std::string(fpad, ' ') << fila_vehiculos
-              << std::string(std::max(0, ancho - fpad - (int)fila_vehiculos.size()), ' ')
-              << "║\n";
-
-    /* Leyenda */
-    std::cout << " ║" << std::string(ancho, '-') << "║\n";
-    std::string leyenda = " [V]=libre [~]=en uso [X]=averiado [*V*]=tuyo ";
-    std::cout << " ║" << leyenda
-              << std::string(std::max(0, ancho - (int)leyenda.size()), ' ')
-              << "║\n";
-
-    /* Estadisticas */
-    std::string stats = " Disp:" + std::to_string(disp) +
-                        " EnUso:" + std::to_string(en_uso) +
-                        " Averiados:" + std::to_string(av) + " ";
-    std::cout << " ║" << stats
-              << std::string(std::max(0, ancho - (int)stats.size()), ' ')
-              << "║\n";
-
-    /* Linea inferior */
-    std::cout << " ╚" << borde << "╝\n\n";
+    borde('-');
+    linea_izq(leyenda);
+    linea_izq(stats_s);
+    borde('=');
+    std::cout << "\n";
 }

@@ -43,3 +43,9 @@
 [2026-06-08 13:40:15] SESION iniciada por administrador
 =======
 >>>>>>> 4454468c69166930b8ec41b0c9fb94fac238a608
+[2026-06-08 15:39:40] RESERVA usuario 25 vehiculo 5
+[2026-06-08 16:00:28] TRAYECTO iniciado usuario 25 vehiculo 3 trayecto 1
+[2026-06-08 16:00:35] TRAYECTO finalizado usuario 25 trayecto 1 dist 3.0km
+[2026-06-08 16:01:32] RESERVA usuario 25 vehiculo 4
+[2026-06-08 16:17:25] TRAYECTO iniciado usuario 25 vehiculo 5 trayecto 2
+[2026-06-08 16:17:35] TRAYECTO finalizado usuario 25 trayecto 2 dist 10.0km
