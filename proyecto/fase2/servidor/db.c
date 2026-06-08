@@ -133,7 +133,7 @@ int cargar_usuarios(sqlite3 *db, const char *csv){
         int id;
         char nombre[100];
 
-        if(sscanf(linea, "%d,%99[^\n]", &id, nombre) == 2){
+        if(sscanf(linea, "%d,%99[^,\n]", &id, nombre) == 2){
             sqlite3_bind_int(stmt, 1, id);
             sqlite3_bind_text(stmt, 2, nombre, -1, SQLITE_TRANSIENT);
             sqlite3_step(stmt);

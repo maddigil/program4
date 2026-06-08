@@ -1,26 +1,3 @@
-/*
- * server.c
- * Servidor de sockets TCP para Euskokar.
- *
- * ¿Que es un socket?
- * ------------------
- * Un socket es como un "enchufe de red". Permite que dos programas (en la
- * misma maquina o en maquinas distintas) se comuniquen enviando y recibiendo
- * cadenas de texto.
- *
- * Lado servidor (este fichero):
- *   1. socket()  → crea el enchufe
- *   2. bind()    → le asigna un puerto (numero de puerta, p.ej. 8080)
- *   3. listen()  → empieza a esperar llamadas entrantes
- *   4. accept()  → acepta una conexion de un cliente → devuelve nuevo fd
- *   5. recv()/send() → recibir/enviar datos por ese fd
- *   6. close()   → cierra la conexion
- *
- * Cada cliente que se conecta se gestiona en un hilo (pthread) separado,
- * para que varios usuarios puedan conectarse a la vez.
- * El acceso a la base de datos se protege con un mutex.
- */
-
 #include "server.h"
 #include "db.h"
 #include "logic.h"
@@ -29,27 +6,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <time.h>
 
-/* Headers de red (Linux/Unix) */
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <unistd.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+#endif
 
-/* ------------------------------------------------------------------ */
-/* Utilidades de red                                                    */
-/* ------------------------------------------------------------------ */
-
-/* Envia una cadena al cliente asegurandose de que se manda completa */
 static void net_enviar(int fd, const char *msg) {
     char buf[TAM_BUF];
     int n = snprintf(buf, sizeof(buf), "%s\n", msg);
     send(fd, buf, n, 0);
 }
 
-/* Envia "OK dato" */
 static void net_ok(int fd, const char *dato) {
     char buf[TAM_BUF];
     if (dato && dato[0] != '\0')
@@ -59,21 +33,12 @@ static void net_ok(int fd, const char *dato) {
     net_enviar(fd, buf);
 }
 
-/* Envia "ERROR mensaje" */
 static void net_error(int fd, const char *msg) {
     char buf[TAM_BUF];
     snprintf(buf, sizeof(buf), "ERROR %s", msg);
     net_enviar(fd, buf);
 }
 
-/* ------------------------------------------------------------------ */
-/* Funciones que consultan la BD y envian los datos al cliente         */
-/* ------------------------------------------------------------------ */
-
-/*
- * Envia la lista de estaciones con disponibilidad en tiempo real.
- * Formato de cada linea: id|abrev|nombre|plazas|disponibles
- */
 static void cmd_listar_estaciones(int fd, sqlite3 *db) {
     sqlite3_stmt *stmt;
     const char *sql =
@@ -89,31 +54,24 @@ static void cmd_listar_estaciones(int fd, sqlite3 *db) {
         return;
     }
 
-    net_enviar(fd, RESP_OK);   /* Cabecera: OK (viene la lista) */
+    net_enviar(fd, RESP_OK);
 
     char linea[256];
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int    id    = sqlite3_column_int(stmt, 0);
+        int         id   = sqlite3_column_int(stmt, 0);
         const char *ab   = (const char *)sqlite3_column_text(stmt, 1);
         const char *nom  = (const char *)sqlite3_column_text(stmt, 2);
-        int    plaz = sqlite3_column_int(stmt, 3);
-        int    disp = sqlite3_column_int(stmt, 4);
+        int         plaz = sqlite3_column_int(stmt, 3);
+        int         disp = sqlite3_column_int(stmt, 4);
         snprintf(linea, sizeof(linea), "%d|%s|%s|%d|%d",
-                 id,
-                 ab  ? ab  : "?",
-                 nom ? nom : "?",
-                 plaz, disp);
+                 id, ab ? ab : "?", nom ? nom : "?", plaz, disp);
         net_enviar(fd, linea);
     }
 
-    net_enviar(fd, RESP_FIN);  /* Fin de lista */
+    net_enviar(fd, RESP_FIN);
     sqlite3_finalize(stmt);
 }
 
-/*
- * Envia los vehiculos de una estacion concreta.
- * Formato: id_vehiculo|estado|bateria
- */
 static void cmd_vehiculos_estacion(int fd, sqlite3 *db, int id_estacion) {
     sqlite3_stmt *stmt;
     const char *sql =
@@ -128,9 +86,9 @@ static void cmd_vehiculos_estacion(int fd, sqlite3 *db, int id_estacion) {
 
     char linea[128];
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int        id  = sqlite3_column_int(stmt, 0);
+        int         id  = sqlite3_column_int(stmt, 0);
         const char *est = (const char *)sqlite3_column_text(stmt, 1);
-        double     bat = sqlite3_column_double(stmt, 2);
+        double      bat = sqlite3_column_double(stmt, 2);
         snprintf(linea, sizeof(linea), "%d|%s|%.1f",
                  id, est ? est : "?", bat);
         net_enviar(fd, linea);
@@ -140,10 +98,6 @@ static void cmd_vehiculos_estacion(int fd, sqlite3 *db, int id_estacion) {
     sqlite3_finalize(stmt);
 }
 
-/*
- * Envia todos los vehiculos del sistema.
- * Formato: id|estado|bateria|abrev_estacion
- */
 static void cmd_listar_vehiculos(int fd, sqlite3 *db) {
     sqlite3_stmt *stmt;
     const char *sql =
@@ -158,15 +112,12 @@ static void cmd_listar_vehiculos(int fd, sqlite3 *db) {
 
     char linea[128];
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int        id  = sqlite3_column_int(stmt, 0);
+        int         id  = sqlite3_column_int(stmt, 0);
         const char *est = (const char *)sqlite3_column_text(stmt, 1);
-        double     bat = sqlite3_column_double(stmt, 2);
+        double      bat = sqlite3_column_double(stmt, 2);
         const char *ab  = (const char *)sqlite3_column_text(stmt, 3);
         snprintf(linea, sizeof(linea), "%d|%s|%.1f|%s",
-                 id,
-                 est ? est : "?",
-                 bat,
-                 ab  ? ab  : "-");
+                 id, est ? est : "?", bat, ab ? ab : "-");
         net_enviar(fd, linea);
     }
 
@@ -174,14 +125,21 @@ static void cmd_listar_vehiculos(int fd, sqlite3 *db) {
     sqlite3_finalize(stmt);
 }
 
-/*
- * Procesa el LOGIN del usuario.
- * Comprueba nombre y contraseña en la BD.
- */
 static int cmd_login(int fd, sqlite3 *db, const char *params,
                      int *id_usuario_out) {
     char nombre[100] = {0}, clave[100] = {0};
-    sscanf(params, "%99s %99s", nombre, clave);
+    /* Formato: "nombre con espacios|clave"  — separador '|' */
+    const char *sep = strrchr(params, '|');
+    if (sep) {
+        int len = (int)(sep - params);
+        if (len >= (int)sizeof(nombre)) len = (int)sizeof(nombre) - 1;
+        strncpy(nombre, params, len);
+        nombre[len] = '\0';
+        strncpy(clave, sep + 1, sizeof(clave) - 1);
+    } else {
+        /* Fallback: formato antiguo separado por espacio */
+        sscanf(params, "%99s %99s", nombre, clave);
+    }
 
     Usuario u;
     if (!buscar_usuario_por_nombre(db, nombre, &u)) {
@@ -190,11 +148,10 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
     }
 
     if (strcmp(u.contrasenya, clave) != 0) {
-        net_error(fd, "Contraseña incorrecta");
+        net_error(fd, "Contrasena incorrecta");
         return 0;
     }
 
-    /* Login correcto */
     *id_usuario_out = u.id_usuario;
     char resp[256];
     snprintf(resp, sizeof(resp), "%d %s", u.id_usuario, u.nombre);
@@ -202,14 +159,8 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
     return 1;
 }
 
-/*
- * Reserva un vehiculo para el usuario.
- * Comprueba que el vehiculo esta disponible y que el usuario
- * no tiene ya otro vehiculo activo.
- */
 static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
                           int id_usuario, int id_vehiculo) {
-    /* ¿Ya tiene vehiculo activo? */
     Usuario u;
     if (!buscar_usuario_por_id(db, id_usuario, &u)) {
         net_error(fd, "Usuario no encontrado");
@@ -220,7 +171,6 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* ¿El vehiculo esta disponible? */
     Vehiculo v;
     if (!buscar_vehiculo(db, id_vehiculo, &v)) {
         net_error(fd, "Vehiculo no encontrado");
@@ -233,7 +183,6 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* Crear reserva */
     char ahora[32];
     fecha_ahora(ahora, sizeof(ahora));
     Reserva r;
@@ -249,7 +198,6 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* Log */
     char logmsg[128];
     snprintf(logmsg, sizeof(logmsg),
              "RESERVA usuario %d vehiculo %d", id_usuario, id_vehiculo);
@@ -260,13 +208,8 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
-/*
- * Inicia el uso de un vehiculo (crea un trayecto).
- * Marca el vehiculo como "en_uso" y lo asocia al usuario.
- */
 static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
                                int id_usuario, int id_vehiculo) {
-    /* Comprobaciones */
     Usuario u;
     if (!buscar_usuario_por_id(db, id_usuario, &u)) {
         net_error(fd, "Usuario no encontrado");
@@ -287,7 +230,6 @@ static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* Crear trayecto con fin vacio (se rellena al finalizar) */
     char ahora[32];
     fecha_ahora(ahora, sizeof(ahora));
     Trayecto t;
@@ -299,14 +241,12 @@ static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
 
     insertar_trayecto(db, &t);
 
-    /* Obtener el id del trayecto recien insertado */
     sqlite3_stmt *s;
     int id_tray = 0;
     sqlite3_prepare_v2(db, "SELECT MAX(id_trayecto) FROM Trayecto;", -1, &s, NULL);
     if (sqlite3_step(s) == SQLITE_ROW) id_tray = sqlite3_column_int(s, 0);
     sqlite3_finalize(s);
 
-    /* Actualizar estado del vehiculo y vehiculo activo del usuario */
     actualizar_estado(db, id_vehiculo, "en_uso");
     actualizar_vehiculoActivo(db, id_usuario, id_vehiculo);
 
@@ -321,13 +261,8 @@ static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
-/*
- * Finaliza un trayecto activo.
- * Libera el vehiculo y actualiza distancia.
- */
 static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
                               int id_usuario, int id_trayecto, float distancia) {
-    /* Marcar fin del trayecto en la BD */
     char ahora[32];
     fecha_ahora(ahora, sizeof(ahora));
 
@@ -348,7 +283,6 @@ static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* Liberar el vehiculo */
     Usuario u;
     buscar_usuario_por_id(db, id_usuario, &u);
     int id_veh = u.vehiculo_activo;
@@ -367,16 +301,10 @@ static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
-/*
- * Registra una averia de un vehiculo.
- * Formato params: id_vehiculo tipo descripcion
- */
 static void cmd_reportar_averia(int fd, sqlite3 *db, const Config *cfg,
                                  int id_usuario, const char *params) {
     int id_veh = 0;
     char tipo[32] = {0}, desc[256] = {0};
-
-    /* Parsear: primer token = id, segundo = tipo, resto = descripcion */
     sscanf(params, "%d %31s %255[^\n]", &id_veh, tipo, desc);
 
     if (id_veh <= 0 || tipo[0] == '\0') {
@@ -411,10 +339,6 @@ static void cmd_reportar_averia(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, "Averia registrada. El vehiculo queda bloqueado hasta su reparacion.");
 }
 
-/*
- * Envia el historial de trayectos del usuario.
- * Formato: id_trayecto|id_vehiculo|inicio|fin|distancia
- */
 static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db,
@@ -427,11 +351,11 @@ static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
 
     char linea[256];
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int        id  = sqlite3_column_int(stmt, 0);
-        int        veh = sqlite3_column_int(stmt, 1);
+        int         id  = sqlite3_column_int(stmt, 0);
+        int         veh = sqlite3_column_int(stmt, 1);
         const char *ini = (const char *)sqlite3_column_text(stmt, 2);
         const char *fin = (const char *)sqlite3_column_text(stmt, 3);
-        double     dis = sqlite3_column_double(stmt, 4);
+        double      dis = sqlite3_column_double(stmt, 4);
         snprintf(linea, sizeof(linea), "%d|%d|%s|%s|%.1f",
                  id, veh,
                  ini ? ini : "-",
@@ -444,10 +368,6 @@ static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
     sqlite3_finalize(stmt);
 }
 
-/* ------------------------------------------------------------------ */
-/* Hilo que gestiona un cliente conectado                              */
-/* ------------------------------------------------------------------ */
-
 typedef struct {
     int              fd;
     sqlite3         *db;
@@ -455,7 +375,11 @@ typedef struct {
     pthread_mutex_t *mutex_db;
 } HiloClienteArgs;
 
+#ifdef _WIN32
+static DWORD WINAPI hilo_cliente(void *arg) {
+#else
 static void *hilo_cliente(void *arg) {
+#endif
     HiloClienteArgs *a  = (HiloClienteArgs *)arg;
     int              fd = a->fd;
     sqlite3         *db = a->db;
@@ -463,7 +387,7 @@ static void *hilo_cliente(void *arg) {
     pthread_mutex_t *mx = a->mutex_db;
     free(a);
 
-    int id_usuario   = -1;   /* -1 = no ha hecho login */
+    int id_usuario = -1;
 
     printf("[SERVIDOR] Cliente conectado (fd=%d)\n", fd);
     net_enviar(fd, "BIENVENIDO Euskokar v1.0");
@@ -473,27 +397,22 @@ static void *hilo_cliente(void *arg) {
     while (1) {
         memset(buffer, 0, sizeof(buffer));
         int bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
-        if (bytes <= 0) break;  /* Cliente desconectado */
+        if (bytes <= 0) break;
 
-        /* Quitar \r\n al final */
         buffer[strcspn(buffer, "\r\n")] = '\0';
         if (strlen(buffer) == 0) continue;
 
         printf("[SERVIDOR] fd=%d recibio: '%s'\n", fd, buffer);
 
-        /* Separar comando de parametros */
-        char cmd[64]        = {0};
+        char cmd[64]         = {0};
         char params[TAM_BUF] = {0};
         sscanf(buffer, "%63s %4031[^\n]", cmd, params);
 
-        /* ---- Bloquear BD antes de operar ---- */
         pthread_mutex_lock(mx);
 
-        /* LOGIN - no requiere sesion previa */
         if (strcmp(cmd, CMD_LOGIN) == 0) {
             cmd_login(fd, db, params, &id_usuario);
 
-        /* Resto de comandos requieren login previo */
         } else if (id_usuario < 0) {
             net_error(fd, "Primero debes hacer LOGIN");
 
@@ -514,8 +433,6 @@ static void *hilo_cliente(void *arg) {
         } else if (strcmp(cmd, CMD_USAR_VEH) == 0) {
             int id_veh = atoi(params);
             cmd_usar_vehiculo(fd, db, cfg, id_usuario, id_veh);
-            /* Guardar id del trayecto recien creado */
-            /* (el id se envia en la respuesta "OK id_trayecto") */
 
         } else if (strcmp(cmd, CMD_FIN_TRAYECTO) == 0) {
             int   id_tray = 0;
@@ -543,96 +460,113 @@ static void *hilo_cliente(void *arg) {
 
     printf("[SERVIDOR] Cliente desconectado (fd=%d)\n", fd);
     close(fd);
+#ifdef _WIN32
+    return 0;
+#else
     return NULL;
+#endif
 }
 
-/* ------------------------------------------------------------------ */
-/* Hilo principal del servidor: acepta conexiones                     */
-/* ------------------------------------------------------------------ */
-
+#ifdef _WIN32
+static DWORD WINAPI hilo_servidor(void *arg) {
+#else
 static void *hilo_servidor(void *arg) {
+#endif
     ServidorArgs *sa = (ServidorArgs *)arg;
 
-    /* 1. Crear el socket del servidor */
-    int servidor_fd = socket(AF_INET,     /* IPv4              */
-                             SOCK_STREAM, /* TCP (fiable)      */
-                             0);          /* protocolo por defecto */
+#ifdef _WIN32
+    WSADATA wsa;
+    WSAStartup(MAKEWORD(2,2), &wsa);
+#endif
+
+    int servidor_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (servidor_fd < 0) {
         perror("[SERVIDOR] Error al crear el socket");
+#ifdef _WIN32
+        return 1;
+#else
         return NULL;
+#endif
     }
 
-    /* Permitir reutilizar el puerto rapidamente tras reiniciar */
     int opt = 1;
-    setsockopt(servidor_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(servidor_fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
 
-    /* 2. Asociar el socket a un puerto (bind) */
     struct sockaddr_in dir;
     memset(&dir, 0, sizeof(dir));
     dir.sin_family      = AF_INET;
-    dir.sin_addr.s_addr = INADDR_ANY;   /* Acepta conexiones de cualquier IP */
+    dir.sin_addr.s_addr = INADDR_ANY;
     dir.sin_port        = htons(sa->puerto);
 
     if (bind(servidor_fd, (struct sockaddr *)&dir, sizeof(dir)) < 0) {
         perror("[SERVIDOR] Error en bind");
         close(servidor_fd);
+#ifdef _WIN32
+        return 1;
+#else
         return NULL;
+#endif
     }
 
-    /* 3. Empezar a escuchar (hasta 10 conexiones en cola) */
     if (listen(servidor_fd, 10) < 0) {
         perror("[SERVIDOR] Error en listen");
         close(servidor_fd);
+#ifdef _WIN32
+        return 1;
+#else
         return NULL;
+#endif
     }
 
     printf("[SERVIDOR] Escuchando en puerto %d...\n", sa->puerto);
 
-    /* 4. Bucle principal: aceptar y gestionar clientes */
     while (1) {
         struct sockaddr_in dir_cliente;
         socklen_t tam = sizeof(dir_cliente);
 
-        /* accept() bloquea hasta que llega un cliente */
-        int cliente_fd = accept(servidor_fd,
-                                (struct sockaddr *)&dir_cliente,
-                                &tam);
+        int cliente_fd = accept(servidor_fd, (struct sockaddr *)&dir_cliente, &tam);
         if (cliente_fd < 0) {
             perror("[SERVIDOR] Error en accept");
             continue;
         }
 
-        printf("[SERVIDOR] Nueva conexion desde %s\n",
-               inet_ntoa(dir_cliente.sin_addr));
+        printf("[SERVIDOR] Nueva conexion\n");
 
-        /* Preparar argumentos para el hilo del cliente */
         HiloClienteArgs *ha = malloc(sizeof(HiloClienteArgs));
         ha->fd       = cliente_fd;
         ha->db       = sa->db;
         ha->cfg      = sa->cfg;
         ha->mutex_db = sa->mutex_db;
 
-        /* Crear un hilo nuevo para gestionar este cliente */
+#ifdef _WIN32
+        CloseHandle(CreateThread(NULL, 0, hilo_cliente, ha, 0, NULL));
+#else
         pthread_t hilo;
         pthread_attr_t attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
         pthread_create(&hilo, &attr, hilo_cliente, ha);
         pthread_attr_destroy(&attr);
+#endif
     }
 
     close(servidor_fd);
+#ifdef _WIN32
+    return 0;
+#else
     return NULL;
+#endif
 }
 
-/* ------------------------------------------------------------------ */
-/* Funcion publica: lanza el servidor en un hilo separado             */
-/* ------------------------------------------------------------------ */
-
 int servidor_iniciar(ServidorArgs *args, pthread_t *hilo) {
+#ifdef _WIN32
+    *hilo = CreateThread(NULL, 0, hilo_servidor, args, 0, NULL);
+    return (*hilo != NULL) ? 1 : 0;
+#else
     if (pthread_create(hilo, NULL, hilo_servidor, args) != 0) {
         perror("Error al crear el hilo del servidor");
         return 0;
     }
     return 1;
+#endif
 }

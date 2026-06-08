@@ -1,9 +1,15 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
+
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <windows.h>
+#else
+  #include <unistd.h>
+  #include <pthread.h>
+#endif
+
 
 #include "config.h"
 #include "db.h"
@@ -61,14 +67,22 @@ int main(void) {
         return 1;
     }
 
-    pthread_detach(hilo_srv);
-    printf("[SERVIDOR] Escuchando en puerto %d...\n\n", puerto);
+#ifdef _WIN32
+    Sleep(100);
+#endif
 
-    printf("Iniciando sesion de administrador local...\n\n");
+    printf("[SERVIDOR] Escuchando en puerto %d...\n\n", puerto);
+    printf("Iniciando sesion de administrador local...\n");
+    printf("(Usuario admin: '%s' segun datos/config.cfg)\n\n", cfg.admin_usuario ? cfg.admin_usuario : "admin");
 
     if (!admin_login(&cfg)) {
         printf("Acceso denegado. El servidor sigue activo en segundo plano.\n");
+#ifdef _WIN32
+        printf("Pulsa Ctrl+C para detener el servidor.\n");
+        WaitForSingleObject(hilo_srv, INFINITE);
+#else
         pause();
+#endif
         pthread_mutex_destroy(&mutex_db);
         cerrar_baseDatos(db);
         config_liberar(&cfg);
@@ -77,7 +91,14 @@ int main(void) {
 
     admin_menu(db, &cfg);
 
-    printf("\nApagando servidor...\n");
+    /* Al salir del menu admin el servidor de sockets sigue activo */
+    printf("\nSesion admin cerrada. El servidor sigue activo.\n");
+    printf("Pulsa Ctrl+C para apagar el servidor.\n");
+#ifdef _WIN32
+    WaitForSingleObject(hilo_srv, INFINITE);
+#else
+    pause();
+#endif
     pthread_mutex_destroy(&mutex_db);
     cerrar_baseDatos(db);
     config_liberar(&cfg);

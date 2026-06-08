@@ -1,31 +1,30 @@
-/*
- * server.h
- * Declaraciones del servidor de sockets de Euskokar.
- * El servidor corre en un hilo (pthread) separado al menu de administrador,
- * de modo que ambos pueden funcionar a la vez.
- */
-
 #ifndef SERVER_H
 #define SERVER_H
 
 #include "sqlite3.h"
 #include "config.h"
-#include <pthread.h>
 
-/* Datos que necesita el hilo servidor */
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <windows.h>
+  typedef HANDLE     pthread_t;
+  typedef HANDLE     pthread_mutex_t;
+  #define pthread_mutex_lock(m)    WaitForSingleObject(*(m), INFINITE)
+  #define pthread_mutex_unlock(m)  ReleaseMutex(*(m))
+  #define pthread_mutex_init(m,a)  (*(m) = CreateMutex(NULL, FALSE, NULL))
+  #define pthread_mutex_destroy(m) CloseHandle(*(m))
+  #define close(s)                 closesocket(s)
+#else
+  #include <pthread.h>
+#endif
+
 typedef struct {
-    sqlite3          *db;          /* Base de datos compartida */
-    const Config     *cfg;         /* Configuracion del sistema */
-    int               puerto;      /* Puerto en el que escucha */
-    pthread_mutex_t  *mutex_db;    /* Mutex para proteger acceso a la BD */
+    sqlite3         *db;
+    const Config    *cfg;
+    int              puerto;
+    pthread_mutex_t *mutex_db;
 } ServidorArgs;
 
-/*
- * servidor_iniciar:
- *   Lanza el servidor de sockets en un hilo aparte.
- *   Devuelve 1 si se inicio bien, 0 si hubo error.
- *   El hilo queda guardado en *hilo para poder hacer join al salir.
- */
 int servidor_iniciar(ServidorArgs *args, pthread_t *hilo);
 
-#endif /* SERVER_H */
+#endif

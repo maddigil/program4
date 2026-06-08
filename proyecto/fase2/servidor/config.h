@@ -14,8 +14,10 @@ typedef struct {
     char *usuarios_csv;
     char *vehiculos_csv;
     char *log_path;
-    char *servidor_ip;      /* IP en la que escucha el servidor */
-    int   servidor_puerto;  /* Puerto (por defecto PUERTO_DEFAULT) */
+    //IP que escucha el servidor
+    char *servidor_ip;
+    //puerto  
+    int   servidor_puerto;  
 } Config;
 
 int  config_cargar(const char *ruta, Config *cfg);
@@ -24,4 +26,4 @@ void config_mostrar(const Config *cfg);
 
 void config_liberar(Config *cfg);
 
-#endif 
+#endif

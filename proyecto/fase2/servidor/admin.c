@@ -13,10 +13,19 @@ int admin_login(const Config *cfg){
     printf(" | SISTEMA DE GESTION EUSKOKAR    |\n");
     printf(" | ADMINISTRADOR LOCAL            |\n");
     printf(" +================================+\n\n");
+    printf(" NOTA: Credenciales de ADMINISTRADOR (no de usuario).\n");
+    printf("       Para solo arrancar el servidor, pulse Enter sin escribir nada.\n\n");
 
     while(intentos > 0){
         intentos--;
         leer_cadena(" Usuario: ", usuario, MAX_VALOR);
+
+        /* Si el usuario pulsa Enter sin escribir nada, arrancar solo el servidor */
+        if(usuario[0] == '\0') {
+            printf("Modo servidor activo. Acceso admin omitido.\n");
+            return 1;
+        }
+
         leer_cadena(" Clave  : ", clave, MAX_VALOR);
 
         if(strcmp(usuario, cfg->admin_usuario) == 0 &&
