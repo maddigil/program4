@@ -69,10 +69,9 @@ void MenuUsuario::ejecutar() {
             case 6: opcionReportarAveria(); break;
             case 7: opcionHistorial();      break;
             case 0:
-                cli_.enviarComando("SALIR");
-                cli_.leerLinea();
-                std::cout << "\nHasta pronto!\n";
-                return;
+             cli_.enviarComando("SALIR");
+             cli_.leerLinea();
+            return;
             default:
                 std::cout << "Opcion no valida.\n";
         }

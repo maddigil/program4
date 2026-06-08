@@ -99,10 +99,14 @@ int main() {
 
     //Menu principal del usuario
     menu_principal(cli, id_usuario, nombre_usuario);
-
-    menu_principal(cli, id_usuario, nombre_usuario);
-
-    std::cout << "\n Hasta pronto.\n\n";
     
+
+    std::cout << "\nHasta pronto!\n";
+
+  
+
+   
+
     return 0;
 }
+
