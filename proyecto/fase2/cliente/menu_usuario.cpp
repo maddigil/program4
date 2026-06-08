@@ -212,7 +212,7 @@ void MenuUsuario::opcionReservar() {
     std::string resp = cli_.leerLinea();
     
     if (resp.rfind("OK", 0) == 0) {
-        id_vehiculo_reservado_ = id_veh; // Guardamos el estado
+        id_vehiculo_reservado_ = id_veh; // para guardar el estado
         cache_->invalidarTodo();
         std::cout << "Reserva confirmada para el vehiculo " << id_veh << "\n";
     } else {
