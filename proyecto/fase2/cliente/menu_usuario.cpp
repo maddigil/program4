@@ -1,4 +1,3 @@
-
 #include "menu_usuario.h"
 #include "cache_manager.h"
 #include "ascii_mapa.h"
@@ -50,7 +49,8 @@ MenuUsuario::MenuUsuario(Cliente& cli, int id_usuario,
       nombre_usuario_(nombre_usuario),
       id_vehiculo_activo_(-1),
       id_trayecto_activo_(-1),
-      cache_(make_unique<CacheManager>())
+      cache_(make_unique<CacheManager>()),
+      id_vehiculo_reservado_(-1)
 {}
 
 MenuUsuario::~MenuUsuario() = default;
@@ -87,6 +87,16 @@ void MenuUsuario::mostrarMenu() const {
     for (int i = 0; i < pad; ++i) cout << ' ';
     cout << "|\n";
     cout << "+=================================+\n";
+
+    if (id_vehiculo_reservado_ != -1){
+        cout << " ! Reserva activa: vehiculo " << id_vehiculo_reservado_ << "\n";
+    }else{
+        cout << " ! No hay reserva activa\n";
+    }
+    if (id_vehiculo_activo_ != -1){
+        cout << " > Trayecto en curso: vehiculo " << id_vehiculo_activo_
+             << " (trayecto " << id_trayecto_activo_ << ")\n";
+    }
     cout << " 1. Ver mapa de Gipuzkoa\n";
     cout << " 2. Ver estacion concreta (minimapa)\n";
     cout << " 3. Reservar un vehiculo\n";
@@ -96,11 +106,7 @@ void MenuUsuario::mostrarMenu() const {
     cout << " 7. Ver mi historial de trayectos\n";
     cout << " 0. Salir\n";
     cout << "Opcion: ";
-    if (id_vehiculo_reservado_ != -1) {
-        cout << " ! Tienes una reserva activa (Vehiculo: " << id_vehiculo_reservado_ << ")\n";
-    }
 }
-
 int MenuUsuario::leerOpcion() const {
     int op;
     cin >> op;
@@ -212,9 +218,9 @@ void MenuUsuario::opcionReservar() {
     string resp = cli_.leerLinea();
     
     if (resp.rfind("OK", 0) == 0) {
-        id_vehiculo_reservado_ = id_veh; // para guardar el estado
+        id_vehiculo_reservado_ = id_veh;
         cache_->invalidarTodo();
-       cout << "Reserva confirmada para el vehiculo " << id_veh << "\n";
+        cout << "Reserva confirmada para el vehiculo " << id_veh << "\n";
     } else {
         cout << "Error en reserva: " << resp << "\n";
     }
@@ -234,31 +240,70 @@ void MenuUsuario::opcionUsarVehiculo() {
 
     cli_.enviarComando("USAR_VEH " + to_string(id_veh));
     string resp = cli_.leerLinea();
-   cout << resp << "\n";
 
     if (resp.rfind("OK", 0) == 0) {
         istringstream ss(resp);
         string ok;
         ss >> ok >> id_trayecto_activo_;
-        id_vehiculo_activo_ = id_veh;
+        id_vehiculo_activo_    = id_veh;
+        id_vehiculo_reservado_ = -1;   /* La reserva queda cancelada al iniciar */
         cache_->invalidarTodo();
         cout << "Trayecto iniciado (ID " << id_trayecto_activo_ << "). Buen viaje!\n";
+    } else {
+        cout << resp << "\n";
     }
 }
 
 
+/* ------------------------------------------------------------------ *
+ * opcionFinTrayecto                                                   *
+ *                                                                      *
+ * CAMBIO: ahora solicita también la estación de destino y la envía   *
+ * al servidor junto con el id del trayecto y la distancia.            *
+ * Protocolo: FIN_TRAYECTO id_trayecto distancia id_estacion_destino  *
+ * ------------------------------------------------------------------ */
 void MenuUsuario::opcionFinTrayecto() {
     if (id_trayecto_activo_ == -1) {
         cout << "No tienes ningun trayecto activo.\n";
         return;
     }
+
+    /* Obtener lista de estaciones para mostrar opciones al usuario */
+    vector<EstacionCache> estaciones;
+    if (cache_->estacionesValidas()) {
+        estaciones = cache_->getEstaciones();
+    } else {
+        cli_.enviarComando("LISTAR_EST");
+        vector<string> lineas = cli_.leerLista();
+        for (const auto& l : lineas)
+            if (!l.empty()) estaciones.push_back(parseEstacion(l));
+        cache_->actualizarEstaciones(estaciones);
+    }
+
+    cout << "\n--- Estaciones disponibles (elige donde dejas el vehiculo) ---\n";
+    for (const auto& e : estaciones)
+        cout << "  " << e.id << ". " << e.nombre << "\n";
+
+    cout << "ID de la estacion de destino: ";
+    int id_dest;
+    cin >> id_dest;
+    cin.ignore();
+
+    if (id_dest <= 0) {
+        cout << "ID de estacion no valido. Operacion cancelada.\n";
+        return;
+    }
+
     cout << "Distancia recorrida (km): ";
     double dist;
     cin >> dist;
     cin.ignore();
 
-    cli_.enviarComando("FIN_TRAYECTO " + to_string(id_trayecto_activo_)
-                       + " " + to_string(dist));
+    /* FIN_TRAYECTO id_trayecto distancia id_estacion_destino */
+    cli_.enviarComando("FIN_TRAYECTO "
+                       + to_string(id_trayecto_activo_)
+                       + " " + to_string(dist)
+                       + " " + to_string(id_dest));
     string resp = cli_.leerLinea();
     cout << resp << "\n";
 
@@ -266,6 +311,7 @@ void MenuUsuario::opcionFinTrayecto() {
         id_vehiculo_activo_ = -1;
         id_trayecto_activo_ = -1;
         cache_->invalidarTodo();
+        cout << "El mapa y los minimapas ya reflejan la nueva ubicacion del vehiculo.\n";
     }
 }
 
@@ -297,6 +343,12 @@ void MenuUsuario::opcionReportarAveria() {
 }
 
 
+/* ------------------------------------------------------------------ *
+ * opcionHistorial                                                     *
+ *                                                                      *
+ * CAMBIO: el servidor ahora envía 7 campos (origen y destino además  *
+ * de los anteriores). Se muestra la ruta origen -> destino.           *
+ * ------------------------------------------------------------------ */
 void MenuUsuario::opcionHistorial() {
     cli_.enviarComando("HISTORIAL");
     vector<string> lineas = cli_.leerLista();
@@ -306,22 +358,37 @@ void MenuUsuario::opcionHistorial() {
 
     cout << "\n--- Historial de trayectos (ultimos 20) ---\n";
     cout << left;
-    cout.width(6);  cout << "ID";
-    cout.width(6);  cout << "Veh";
-    cout.width(22); cout << "Inicio";
-    cout.width(22); cout << "Fin";
-    cout.width(8);  cout << "Km";
-    cout << "\n" << string(64, '-') << "\n";
+    cout.width(5);  cout << "ID";
+    cout.width(5);  cout << "Veh";
+    cout.width(20); cout << "Origen";
+    cout.width(20); cout << "Destino";
+    cout.width(20); cout << "Inicio";
+    cout.width(20); cout << "Fin";
+    cout.width(7);  cout << "Km";
+    cout << "\n" << string(97, '-') << "\n";
 
     for (const auto& l : lineas) {
         if (l.empty()) continue;
         auto f = split(l);
-        if (f.size() >= 5) {
-            cout.width(6);  cout << f[0];   // id_trayecto
-            cout.width(6);  cout << f[1];   // vehiculo_id
-            cout.width(22); cout << f[2];   // inicio
-            cout.width(22); cout << f[3];   // fin
-            cout.width(8);  cout << f[4];   // distancia
+        /* Formato nuevo: id|vehiculo|origen|destino|inicio|fin|distancia (7 campos) */
+        if (f.size() >= 7) {
+            cout.width(5);  cout << f[0];
+            cout.width(5);  cout << f[1];
+            cout.width(20); cout << f[2];
+            cout.width(20); cout << f[3];
+            cout.width(20); cout << f[4];
+            cout.width(20); cout << f[5];
+            cout.width(7);  cout << f[6];
+            cout << "\n";
+        } else if (f.size() >= 5) {
+            /* Compatibilidad con trayectos anteriores sin origen/destino */
+            cout.width(5);  cout << f[0];
+            cout.width(5);  cout << f[1];
+            cout.width(20); cout << "-";
+            cout.width(20); cout << "-";
+            cout.width(20); cout << f[2];
+            cout.width(20); cout << f[3];
+            cout.width(7);  cout << f[4];
             cout << "\n";
         } else {
             cout << l << "\n";

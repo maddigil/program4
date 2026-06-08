@@ -1,9 +1,5 @@
-#include "cliente.h"
-
-#include <iostream>
-#include <cstring>
-using namespace std;
 #ifdef _WIN32
+  #define WIN32_LEAN_AND_MEAN
   #include <winsock2.h>
   #include <windows.h>
   #define close(s) closesocket(s)
@@ -12,6 +8,11 @@ using namespace std;
   #include <netinet/in.h>
   #include <arpa/inet.h>
 #endif
+
+#include "cliente.h"
+#include <iostream>
+#include <cstring>
+using namespace std;
 
 Cliente::Cliente() : m_fd(-1), m_conectado(false) {
 #ifdef _WIN32

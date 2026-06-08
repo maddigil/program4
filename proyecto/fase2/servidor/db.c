@@ -73,10 +73,18 @@ int crearTablas(sqlite3 *db){
         "  hora_fin TEXT,"
         "  estado TEXT DEFAULT 'activa'"
         ");"
+        /* ------------------------------------------------------------------ *
+         * Trayecto: ahora incluye estacion_origen y estacion_destino para     *
+         * poder registrar correctamente el movimiento del vehículo entre      *
+         * estaciones. Se usa ALTER TABLE para no romper bases de datos        *
+         * existentes (se ejecuta en crearTablas junto con CREATE).            *
+         * ------------------------------------------------------------------ */
         "CREATE TABLE IF NOT EXISTS Trayecto ("
         "  id_trayecto INTEGER PRIMARY KEY AUTOINCREMENT,"
         "  usuario_id INTEGER REFERENCES Usuario(id_usuario),"
         "  vehiculo_id INTEGER REFERENCES Vehiculo(id_vehiculo),"
+        "  estacion_origen INTEGER REFERENCES Estacion(id_estacion),"
+        "  estacion_destino INTEGER REFERENCES Estacion(id_estacion),"
         "  inicio TEXT,"
         "  fin TEXT,"
         "  distancia REAL DEFAULT 0.0"
@@ -86,6 +94,15 @@ int crearTablas(sqlite3 *db){
         printf("Ha habido un error creando tablas\n");
         return 0;
     }
+
+    /* Migración: añadir columnas nuevas si la tabla ya existía sin ellas */
+    sqlite3_exec(db,
+        "ALTER TABLE Trayecto ADD COLUMN estacion_origen INTEGER;",
+        NULL, NULL, NULL);  /* Ignoramos el error si ya existe */
+    sqlite3_exec(db,
+        "ALTER TABLE Trayecto ADD COLUMN estacion_destino INTEGER;",
+        NULL, NULL, NULL);
+
     return 1;
 }
 
@@ -377,6 +394,23 @@ int actualizar_bateria(sqlite3 *db, int id, float bateria){
     return sqlite3_changes(db);
 }
 
+/* ------------------------------------------------------------------ *
+ * NUEVA función: mueve el vehículo a otra estación al finalizar      *
+ * el trayecto. Es la pieza que faltaba para que el sistema refleje   *
+ * correctamente dónde está cada vehículo después de un viaje.        *
+ * ------------------------------------------------------------------ */
+int actualizar_ubicacion_vehiculo(sqlite3 *db, int id_vehiculo, int id_estacion_destino){
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db,
+        "UPDATE Vehiculo SET ubicacion_estacion = ? WHERE id_vehiculo = ?;",
+        -1, &stmt, NULL);
+    sqlite3_bind_int(stmt, 1, id_estacion_destino);
+    sqlite3_bind_int(stmt, 2, id_vehiculo);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return sqlite3_changes(db);
+}
+
 int actualizar_vehiculoActivo(sqlite3 *db, int id_usuario, int id_vehiculo){
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db, "UPDATE Usuario SET vehiculo_activo = ? WHERE id_usuario = ?;", -1, &stmt, NULL);
@@ -492,16 +526,53 @@ int insertar_reserva(sqlite3 *db, const Reserva *r){
     return sqlite3_changes(db);
 }
 
+/* ------------------------------------------------------------------ *
+ * NUEVA función: cancela todas las reservas activas de un vehículo.  *
+ * Se llama al iniciar un trayecto para liberar reservas de otros     *
+ * usuarios que pudieran existir sobre ese mismo vehículo.            *
+ * ------------------------------------------------------------------ */
+int cancelar_reservas_vehiculo(sqlite3 *db, int id_vehiculo){
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db,
+        "UPDATE Reserva SET estado='cancelada' "
+        "WHERE vehiculo_id=? AND estado='activa';",
+        -1, &stmt, NULL);
+    sqlite3_bind_int(stmt, 1, id_vehiculo);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return sqlite3_changes(db);
+}
+
+/* ------------------------------------------------------------------ *
+ * NUEVA función: comprueba si un vehículo tiene reserva activa de    *
+ * otro usuario distinto. Devuelve el id_usuario del reservante o 0.  *
+ * ------------------------------------------------------------------ */
+int reserva_activa_vehiculo(sqlite3 *db, int id_vehiculo){
+    sqlite3_stmt *stmt;
+    int usuario_reservante = 0;
+    sqlite3_prepare_v2(db,
+        "SELECT usuario_id FROM Reserva "
+        "WHERE vehiculo_id=? AND estado='activa' LIMIT 1;",
+        -1, &stmt, NULL);
+    sqlite3_bind_int(stmt, 1, id_vehiculo);
+    if(sqlite3_step(stmt) == SQLITE_ROW)
+        usuario_reservante = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    return usuario_reservante;
+}
+
 int insertar_trayecto(sqlite3 *db, const Trayecto *t){
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db,
-        "INSERT INTO Trayecto(usuario_id,vehiculo_id,inicio,fin,distancia)"
-        " VALUES(?,?,?,?,?);", -1, &stmt, NULL);
+        "INSERT INTO Trayecto(usuario_id,vehiculo_id,estacion_origen,estacion_destino,inicio,fin,distancia)"
+        " VALUES(?,?,?,?,?,?,?);", -1, &stmt, NULL);
     sqlite3_bind_int(stmt, 1, t->usuario_id);
     sqlite3_bind_int(stmt, 2, t->vehiculo_id);
-    sqlite3_bind_text(stmt, 3, t->inicio, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, t->fin, -1, SQLITE_STATIC);
-    sqlite3_bind_double(stmt, 5, t->distancia);
+    sqlite3_bind_int(stmt, 3, t->estacion_origen);
+    sqlite3_bind_int(stmt, 4, t->estacion_destino);  /* 0 mientras está en curso */
+    sqlite3_bind_text(stmt, 5, t->inicio, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 6, t->fin, -1, SQLITE_STATIC);
+    sqlite3_bind_double(stmt, 7, t->distancia);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     return sqlite3_changes(db);
@@ -510,20 +581,34 @@ int insertar_trayecto(sqlite3 *db, const Trayecto *t){
 int listar_trayectosUsuario(sqlite3 *db, int id_usuario){
     sqlite3_stmt *stmt;
     int contador = 0;
+    /* Incluimos origen y destino en el listado */
     sqlite3_prepare_v2(db,
-        "SELECT id_trayecto, vehiculo_id, inicio, fin, distancia "
-        "FROM Trayecto WHERE usuario_id = ? ORDER BY id_trayecto DESC;",
+        "SELECT t.id_trayecto, t.vehiculo_id, "
+        "       eo.nombre, ed.nombre, "
+        "       t.inicio, t.fin, t.distancia "
+        "FROM Trayecto t "
+        "LEFT JOIN Estacion eo ON t.estacion_origen  = eo.id_estacion "
+        "LEFT JOIN Estacion ed ON t.estacion_destino = ed.id_estacion "
+        "WHERE t.usuario_id = ? ORDER BY t.id_trayecto DESC;",
         -1, &stmt, NULL);
 
     sqlite3_bind_int(stmt, 1, id_usuario);
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
         int id_tray = sqlite3_column_int(stmt, 0);
-        int id_v = sqlite3_column_int(stmt, 1);
-        const char *t_inicio = (const char *)sqlite3_column_text(stmt, 2);
-        const char *t_fin = (const char *)sqlite3_column_text(stmt, 3);
-        double dist = sqlite3_column_double(stmt, 4);
-        printf("%d %d %s %s %f\n", id_tray, id_v, t_inicio ? t_inicio : "", t_fin ? t_fin : "", dist);
+        int id_v    = sqlite3_column_int(stmt, 1);
+        const char *orig = (const char *)sqlite3_column_text(stmt, 2);
+        const char *dest = (const char *)sqlite3_column_text(stmt, 3);
+        const char *t_inicio = (const char *)sqlite3_column_text(stmt, 4);
+        const char *t_fin    = (const char *)sqlite3_column_text(stmt, 5);
+        double dist = sqlite3_column_double(stmt, 6);
+        printf("%d %d %s -> %s %s %s %f\n",
+               id_tray, id_v,
+               orig ? orig : "?",
+               dest ? dest : "en curso",
+               t_inicio ? t_inicio : "",
+               t_fin    ? t_fin    : "",
+               dist);
         contador++;
     }
 

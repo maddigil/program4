@@ -1,4 +1,3 @@
-//en comentarios explicacion breve para entender cada metodo:
 #include "ascii_mapa.h"
 
 #include <iostream>
@@ -7,8 +6,7 @@
 #include <algorithm>
 using namespace std;
 
-
-/* Utilidades internas del proyecto:                                         */
+/* Utilidades internas del proyecto: */
 
 /* Busca una estacion por abreviatura en el vector */
 static const DatoEstacion *buscarEstacion(
@@ -33,65 +31,64 @@ static string simboloEstacion(const DatoEstacion *e) {
 
 /* Formatea una celda del mapa grande: "(AB)*" */
 static string celda(const vector<DatoEstacion> &ests,
-                          const string &abrev) {
+                    const string &abrev) {
     const DatoEstacion *e = buscarEstacion(ests, abrev);
     string sim = simboloEstacion(e);
     return "(" + abrev + ")" + sim;
 }
 
 /* ------------------------------------------------------------------ */
-/* Mapa grande de Gipuzkoa                                             */
+/* Mapa grande de Gipuzkoa */
 /* ------------------------------------------------------------------ */
 void dibujar_mapa_grande(const vector<DatoEstacion> &estaciones,
-                          int /*id_vehiculo_usuario*/) {
-
+                         int /*id_vehiculo_usuario*/) {
     cout << "\n";
     cout << " +=========================================================+\n";
     cout << " |           MAPA EUSKOKAR - GIPUZKOA                      |\n";
-    cout << " |   * disponible   X sin vehiculos / averiada             |\n";
+    cout << " |   * disponible   X sin vehiculos / averiada            |\n";
     cout << " +=========================================================+\n";
     cout << " |                                                         |\n";
 
     /* Fila 1: costa norte (Zarautz, Donostia, Errenteria, Hondarribia) */
     cout << " |  "
-              << left << setw(8) << celda(estaciones, "Z")
-              << setw(8) << celda(estaciones, "DC")
-              << setw(8) << celda(estaciones, "DG")
-              << setw(8) << celda(estaciones, "E")
-              << setw(8) << celda(estaciones, "H")
-              << "       |\n";
+         << left << setw(8) << celda(estaciones, "Z")
+         << setw(8) << celda(estaciones, "DC")
+         << setw(8) << celda(estaciones, "DG")
+         << setw(8) << celda(estaciones, "E")
+         << setw(8) << celda(estaciones, "H")
+         << "       |\n";
 
     /* Fila 2: zona costera interior */
     cout << " |  "
-              << setw(8) << celda(estaciones, "DA")
-              << setw(8) << celda(estaciones, "DA2")
-              << setw(8) << celda(estaciones, "DL")
-              << setw(8) << celda(estaciones, "P")
-              << "               |\n";
+         << setw(8) << celda(estaciones, "DA")
+         << setw(8) << celda(estaciones, "DA2")
+         << setw(8) << celda(estaciones, "DL")
+         << setw(8) << celda(estaciones, "P")
+         << "               |\n";
 
     cout << " |                                                         |\n";
 
     /* Fila 3: zona interior norte */
     cout << " |     "
-              << setw(8) << celda(estaciones, "U")
-              << setw(8) << celda(estaciones, "T")
-              << setw(8) << celda(estaciones, "EB")
-              << "                    |\n";
+         << setw(8) << celda(estaciones, "U")
+         << setw(8) << celda(estaciones, "T")
+         << setw(8) << celda(estaciones, "EB")
+         << "                    |\n";
 
     /* Fila 4: zona interior */
     cout << " |     "
-              << setw(8) << celda(estaciones, "A")
-              << setw(8) << celda(estaciones, "L")
-              << setw(8) << celda(estaciones, "HE")
-              << setw(8) << celda(estaciones, "O")
-              << "          |\n";
+         << setw(8) << celda(estaciones, "A")
+         << setw(8) << celda(estaciones, "L")
+         << setw(8) << celda(estaciones, "HE")
+         << setw(8) << celda(estaciones, "O")
+         << "          |\n";
 
     /* Fila 5: sur */
     cout << " |        "
-              << setw(8) << celda(estaciones, "B")
-              << setw(8) << celda(estaciones, "S")
-              << setw(8) << celda(estaciones, "M")
-              << "               |\n";
+         << setw(8) << celda(estaciones, "B")
+         << setw(8) << celda(estaciones, "S")
+         << setw(8) << celda(estaciones, "M")
+         << "               |\n";
 
     cout << " |                                                         |\n";
     cout << " +=========================================================+\n\n";
@@ -100,22 +97,23 @@ void dibujar_mapa_grande(const vector<DatoEstacion> &estaciones,
     int total_disp = 0, total_est = (int)estaciones.size();
     for (const auto &e : estaciones) total_disp += e.disponibles;
     cout << " Estaciones: " << total_est
-              << "   Vehiculos disponibles: " << total_disp << "\n\n";
+         << "   Vehiculos disponibles: " << total_disp << "\n\n";
 }
-
 
 void dibujar_minimapa(const string &nombre_estacion,
                       const vector<DatoVehiculo> &vehiculos,
                       int id_vehiculo_usuario) {
-
     /* --- Construir celdas de vehiculos --- */
-    int disp = 0, av = 0, en_uso = 0;
+    int disp = 0, av = 0, en_uso = 0, res = 0;
     vector<string> celdas;
 
     for (const auto &v : vehiculos) {
         string c;
         if (v.id == id_vehiculo_usuario) {
             c = "[*" + to_string(v.id) + "*]";
+        } else if (v.estado == "reservado") {
+            c = "[#" + to_string(v.id) + "#]";
+            res++;
         } else if (v.estado == "disponible") {
             c = "[ " + to_string(v.id) + " ]";
             disp++;
@@ -136,10 +134,11 @@ void dibujar_minimapa(const string &nombre_estacion,
     if (ancho_vehiculos > 0) ancho_vehiculos--; // quitar espacio final
 
     string titulo = " Estacion: " + nombre_estacion + " ";
-    string leyenda  = " [V]=libre [~]=uso [X]=averiado [*]=tuyo ";
+    string leyenda  = " [#]=reservado [V]=libre [~]=uso [X]=averiado [*]=tuyo ";
     string stats_s  = " Disp:" + to_string(disp)
-                         + " En uso:" + to_string(en_uso)
-                         + " Averiados:" + to_string(av) + " ";
+                    + " Reservados:" + to_string(res)
+                    + " En uso:" + to_string(en_uso)
+                    + " Averiados:" + to_string(av) + " ";
 
     int ancho = 36;
     for (const auto *s : {&titulo, &leyenda, &stats_s})
@@ -164,7 +163,7 @@ void dibujar_minimapa(const string &nombre_estacion,
         if (pad_l < 0) pad_l = 0;
         if (pad_r < 0) pad_r = 0;
         cout << " |" << string(pad_l, ' ') << texto
-                  << string(pad_r, ' ') << "|\n";
+             << string(pad_r, ' ') << "|\n";
     };
 
     /* --- Dibujar marco --- */
@@ -184,7 +183,6 @@ void dibujar_minimapa(const string &nombre_estacion,
                 if (j > i) fila += ' ';
                 fila += celdas[j];
             }
-            // Ajustar ancho si esta fila es mas larga (caso borde calculado mal)
             linea_centro(fila);
         }
     }

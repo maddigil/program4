@@ -39,6 +39,9 @@ static void net_error(int fd, const char *msg) {
     net_enviar(fd, buf);
 }
 
+/* ------------------------------------------------------------------ */
+/* LISTAR_EST                                                           */
+/* ------------------------------------------------------------------ */
 static void cmd_listar_estaciones(int fd, sqlite3 *db) {
     sqlite3_stmt *stmt;
     const char *sql =
@@ -72,32 +75,50 @@ static void cmd_listar_estaciones(int fd, sqlite3 *db) {
     sqlite3_finalize(stmt);
 }
 
+/* ------------------------------------------------------------------ */
+/* VEH_ESTACION                                                         */
+/* ------------------------------------------------------------------ */
 static void cmd_vehiculos_estacion(int fd, sqlite3 *db, int id_estacion) {
     sqlite3_stmt *stmt;
     const char *sql =
-        "SELECT id_vehiculo, estado, bateria "
-        "FROM Vehiculo WHERE ubicacion_estacion = ? "
-        "ORDER BY id_vehiculo;";
+        "SELECT idvehiculo, estado, bateria "
+        "FROM Vehiculo WHERE ubicacionestacion = ? "
+        "ORDER BY idvehiculo;";
 
-    sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        net_error(fd, "Error interno al listar vehiculos");
+        return;
+    }
+
     sqlite3_bind_int(stmt, 1, id_estacion);
-
     net_enviar(fd, RESP_OK);
 
     char linea[128];
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int         id  = sqlite3_column_int(stmt, 0);
-        const char *est = (const char *)sqlite3_column_text(stmt, 1);
-        double      bat = sqlite3_column_double(stmt, 2);
-        snprintf(linea, sizeof(linea), "%d|%s|%.1f",
-                 id, est ? est : "?", bat);
+        int id = sqlite3_column_int(stmt, 0);
+        const char *estado_db = (const char *)sqlite3_column_text(stmt, 1);
+        double bat = sqlite3_column_double(stmt, 2);
+
+        char estado_envio[32];
+        strncpy(estado_envio, estado_db ? estado_db : "desconocido", sizeof(estado_envio) - 1);
+        estado_envio[sizeof(estado_envio) - 1] = '\0';
+
+        int usuario_reserva = reserva_activa_vehiculo(db, id);
+        if (usuario_reserva != 0) {
+            strncpy(estado_envio, "reservado", sizeof(estado_envio) - 1);
+            estado_envio[sizeof(estado_envio) - 1] = '\0';
+        }
+
+        snprintf(linea, sizeof(linea), "%d|%s|%.1f", id, estado_envio, bat);
         net_enviar(fd, linea);
     }
 
     net_enviar(fd, RESP_FIN);
     sqlite3_finalize(stmt);
 }
-
+/* ------------------------------------------------------------------ */
+/* LISTAR_VEH                                                           */
+/* ------------------------------------------------------------------ */
 static void cmd_listar_vehiculos(int fd, sqlite3 *db) {
     sqlite3_stmt *stmt;
     const char *sql =
@@ -125,10 +146,12 @@ static void cmd_listar_vehiculos(int fd, sqlite3 *db) {
     sqlite3_finalize(stmt);
 }
 
+/* ------------------------------------------------------------------ */
+/* LOGIN                                                                */
+/* ------------------------------------------------------------------ */
 static int cmd_login(int fd, sqlite3 *db, const char *params,
                      int *id_usuario_out) {
     char nombre[100] = {0}, clave[100] = {0};
-    /* Formato: "nombre con espacios|clave"  — separador '|' */
     const char *sep = strrchr(params, '|');
     if (sep) {
         int len = (int)(sep - params);
@@ -137,7 +160,6 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
         nombre[len] = '\0';
         strncpy(clave, sep + 1, sizeof(clave) - 1);
     } else {
-        /* Fallback: formato antiguo separado por espacio */
         sscanf(params, "%99s %99s", nombre, clave);
     }
 
@@ -146,9 +168,6 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
         net_error(fd, "Usuario no encontrado");
         return 0;
     }
-
-    printf("[DEBUG] Usuario: '%s' | Contrasena BD: '%s' | Contrasena introducida: '%s'\n",
-           u.nombre, u.contrasenya, clave);
 
     if (strcmp(u.contrasenya, clave) != 0) {
         net_error(fd, "Contrasena incorrecta");
@@ -162,6 +181,11 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
     return 1;
 }
 
+/* ------------------------------------------------------------------ */
+/* RESERVAR                                                             */
+/* Comprueba que el vehículo no tenga ya una reserva activa de otro    */
+/* usuario antes de crear una nueva.                                   */
+/* ------------------------------------------------------------------ */
 static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
                           int id_usuario, int id_vehiculo) {
     Usuario u;
@@ -183,6 +207,18 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
         char msg[128];
         snprintf(msg, sizeof(msg), "Vehiculo no disponible (estado: %s)", v.estado);
         net_error(fd, msg);
+        return;
+    }
+
+    /* Comprobar si ya existe reserva activa de OTRO usuario */
+    int reservante = reserva_activa_vehiculo(db, id_vehiculo);
+    if (reservante != 0 && reservante != id_usuario) {
+        net_error(fd, "Ese vehiculo ya tiene una reserva activa de otro usuario");
+        return;
+    }
+    /* Si ya la tenía el mismo usuario, no crear duplicado */
+    if (reservante == id_usuario) {
+        net_ok(fd, "Ya tienes una reserva activa para ese vehiculo");
         return;
     }
 
@@ -211,6 +247,11 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
+/* ------------------------------------------------------------------ */
+/* USAR_VEH                                                             */
+/* Al iniciar el trayecto se cancela cualquier reserva pendiente sobre  */
+/* este vehículo (la propia del usuario u otras que pudieran existir). */
+/* ------------------------------------------------------------------ */
 static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
                                int id_usuario, int id_vehiculo) {
     Usuario u;
@@ -233,14 +274,19 @@ static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
+    /* Cancelar reservas activas sobre este vehículo (incluida la del propio usuario) */
+    cancelar_reservas_vehiculo(db, id_vehiculo);
+
     char ahora[32];
     fecha_ahora(ahora, sizeof(ahora));
     Trayecto t;
     memset(&t, 0, sizeof(t));
-    t.usuario_id  = id_usuario;
-    t.vehiculo_id = id_vehiculo;
+    t.usuario_id       = id_usuario;
+    t.vehiculo_id      = id_vehiculo;
+    t.estacion_origen  = v.ubicacion_estacion;  /* Guardamos de dónde sale */
+    t.estacion_destino = 0;                     /* Se rellena al finalizar  */
     strncpy(t.inicio, ahora, sizeof(t.inicio) - 1);
-    t.distancia = 0.0f;
+    t.distancia = 0.0;
 
     insertar_trayecto(db, &t);
 
@@ -264,19 +310,51 @@ static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
+/* ------------------------------------------------------------------ */
+/* FIN_TRAYECTO  id_trayecto distancia id_estacion_destino             */
+/*                                                                      */
+/* CAMBIO CLAVE: ahora el cliente envía también la estación de destino  */
+/* y el servidor actualiza ubicacion_estacion del vehículo para que    */
+/* los mapas reflejen correctamente dónde está cada vehículo.          */
+/* ------------------------------------------------------------------ */
 static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
-                              int id_usuario, int id_trayecto, float distancia) {
+                              int id_usuario, int id_trayecto,
+                              float distancia, int id_est_destino) {
+
+    /* Validar que la estación destino existe */
+    if (id_est_destino <= 0) {
+        net_error(fd, "Debes indicar una estacion de destino valida");
+        return;
+    }
+
+    sqlite3_stmt *check;
+    sqlite3_prepare_v2(db,
+        "SELECT id_estacion FROM Estacion WHERE id_estacion = ?;",
+        -1, &check, NULL);
+    sqlite3_bind_int(check, 1, id_est_destino);
+    int existe = (sqlite3_step(check) == SQLITE_ROW);
+    sqlite3_finalize(check);
+
+    if (!existe) {
+        net_error(fd, "Estacion de destino no encontrada");
+        return;
+    }
+
     char ahora[32];
     fecha_ahora(ahora, sizeof(ahora));
 
+    /* Actualizar el trayecto con fin, distancia y estación destino */
     sqlite3_stmt *s;
     sqlite3_prepare_v2(db,
-        "UPDATE Trayecto SET fin=?, distancia=? WHERE id_trayecto=? AND usuario_id=?;",
+        "UPDATE Trayecto "
+        "SET fin=?, distancia=?, estacion_destino=? "
+        "WHERE id_trayecto=? AND usuario_id=?;",
         -1, &s, NULL);
     sqlite3_bind_text(s, 1, ahora, -1, SQLITE_TRANSIENT);
     sqlite3_bind_double(s, 2, distancia);
-    sqlite3_bind_int(s, 3, id_trayecto);
-    sqlite3_bind_int(s, 4, id_usuario);
+    sqlite3_bind_int(s, 3, id_est_destino);
+    sqlite3_bind_int(s, 4, id_trayecto);
+    sqlite3_bind_int(s, 5, id_usuario);
     sqlite3_step(s);
     int cambios = sqlite3_changes(db);
     sqlite3_finalize(s);
@@ -286,24 +364,45 @@ static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
+    /* Obtener el vehículo que usaba este usuario */
     Usuario u;
     buscar_usuario_por_id(db, id_usuario, &u);
     int id_veh = u.vehiculo_activo;
 
+    /* Mover el vehículo a la estación de destino y ponerlo disponible */
+    actualizar_ubicacion_vehiculo(db, id_veh, id_est_destino);
     actualizar_estado(db, id_veh, "disponible");
     actualizar_vehiculoActivo(db, id_usuario, 0);
 
-    char logmsg[128];
+    /* Obtener nombre de la estación destino para el mensaje */
+    char nombre_est[100] = "destino";
+    sqlite3_stmt *nom;
+    sqlite3_prepare_v2(db,
+        "SELECT nombre FROM Estacion WHERE id_estacion = ?;",
+        -1, &nom, NULL);
+    sqlite3_bind_int(nom, 1, id_est_destino);
+    if (sqlite3_step(nom) == SQLITE_ROW) {
+        const char *n = (const char *)sqlite3_column_text(nom, 0);
+        if (n) strncpy(nombre_est, n, sizeof(nombre_est) - 1);
+    }
+    sqlite3_finalize(nom);
+
+    char logmsg[256];
     snprintf(logmsg, sizeof(logmsg),
-             "TRAYECTO finalizado usuario %d trayecto %d dist %.1fkm",
-             id_usuario, id_trayecto, distancia);
+             "TRAYECTO finalizado usuario %d trayecto %d dist %.1fkm destino estacion %d (%s)",
+             id_usuario, id_trayecto, distancia, id_est_destino, nombre_est);
     log_escribir(cfg, logmsg);
 
-    char resp[64];
-    snprintf(resp, sizeof(resp), "Trayecto finalizado. Distancia: %.1f km", distancia);
+    char resp[128];
+    snprintf(resp, sizeof(resp),
+             "Trayecto finalizado. Distancia: %.1f km. Vehiculo dejado en: %s",
+             distancia, nombre_est);
     net_ok(fd, resp);
 }
 
+/* ------------------------------------------------------------------ */
+/* REPORTAR_AV                                                          */
+/* ------------------------------------------------------------------ */
 static void cmd_reportar_averia(int fd, sqlite3 *db, const Config *cfg,
                                  int id_usuario, const char *params) {
     int id_veh = 0;
@@ -324,7 +423,7 @@ static void cmd_reportar_averia(int fd, sqlite3 *db, const Config *cfg,
     Averia a;
     memset(&a, 0, sizeof(a));
     a.id_vehiculo = id_veh;
-    a.id_estacion = 0;
+    a.id_estacion = v.ubicacion_estacion;
     strncpy(a.tipo, tipo, sizeof(a.tipo) - 1);
     strncpy(a.descripcion, desc[0] ? desc : "Sin descripcion", sizeof(a.descripcion) - 1);
     strncpy(a.estado, "pendiente", sizeof(a.estado) - 1);
@@ -342,27 +441,40 @@ static void cmd_reportar_averia(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, "Averia registrada. El vehiculo queda bloqueado hasta su reparacion.");
 }
 
+/* ------------------------------------------------------------------ */
+/* HISTORIAL                                                            */
+/* Ahora incluye estación de origen y destino                          */
+/* ------------------------------------------------------------------ */
 static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db,
-        "SELECT id_trayecto, vehiculo_id, inicio, fin, distancia "
-        "FROM Trayecto WHERE usuario_id = ? ORDER BY id_trayecto DESC LIMIT 20;",
+        "SELECT t.id_trayecto, t.vehiculo_id, "
+        "       eo.nombre, ed.nombre, "
+        "       t.inicio, t.fin, t.distancia "
+        "FROM Trayecto t "
+        "LEFT JOIN Estacion eo ON t.estacion_origen  = eo.id_estacion "
+        "LEFT JOIN Estacion ed ON t.estacion_destino = ed.id_estacion "
+        "WHERE t.usuario_id = ? ORDER BY t.id_trayecto DESC LIMIT 20;",
         -1, &stmt, NULL);
     sqlite3_bind_int(stmt, 1, id_usuario);
 
     net_enviar(fd, RESP_OK);
 
-    char linea[256];
+    char linea[512];
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int         id  = sqlite3_column_int(stmt, 0);
-        int         veh = sqlite3_column_int(stmt, 1);
-        const char *ini = (const char *)sqlite3_column_text(stmt, 2);
-        const char *fin = (const char *)sqlite3_column_text(stmt, 3);
-        double      dis = sqlite3_column_double(stmt, 4);
-        snprintf(linea, sizeof(linea), "%d|%d|%s|%s|%.1f",
+        int         id   = sqlite3_column_int(stmt, 0);
+        int         veh  = sqlite3_column_int(stmt, 1);
+        const char *orig = (const char *)sqlite3_column_text(stmt, 2);
+        const char *dest = (const char *)sqlite3_column_text(stmt, 3);
+        const char *ini  = (const char *)sqlite3_column_text(stmt, 4);
+        const char *fin  = (const char *)sqlite3_column_text(stmt, 5);
+        double      dis  = sqlite3_column_double(stmt, 6);
+        snprintf(linea, sizeof(linea), "%d|%d|%s|%s|%s|%s|%.1f",
                  id, veh,
-                 ini ? ini : "-",
-                 fin ? fin : "en curso",
+                 orig ? orig : "-",
+                 dest ? dest : "en curso",
+                 ini  ? ini  : "-",
+                 fin  ? fin  : "en curso",
                  dis);
         net_enviar(fd, linea);
     }
@@ -371,6 +483,9 @@ static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
     sqlite3_finalize(stmt);
 }
 
+/* ------------------------------------------------------------------ */
+/* Hilo de atención por cliente                                         */
+/* ------------------------------------------------------------------ */
 typedef struct {
     int              fd;
     sqlite3         *db;
@@ -438,10 +553,12 @@ static void *hilo_cliente(void *arg) {
             cmd_usar_vehiculo(fd, db, cfg, id_usuario, id_veh);
 
         } else if (strcmp(cmd, CMD_FIN_TRAYECTO) == 0) {
-            int   id_tray = 0;
-            float dist    = 0.0f;
-            sscanf(params, "%d %f", &id_tray, &dist);
-            cmd_fin_trayecto(fd, db, cfg, id_usuario, id_tray, dist);
+            /* Nuevo formato: id_trayecto distancia id_estacion_destino */
+            int   id_tray    = 0;
+            float dist       = 0.0f;
+            int   id_est_dst = 0;
+            sscanf(params, "%d %f %d", &id_tray, &dist, &id_est_dst);
+            cmd_fin_trayecto(fd, db, cfg, id_usuario, id_tray, dist, id_est_dst);
 
         } else if (strcmp(cmd, CMD_REPORTAR_AV) == 0) {
             cmd_reportar_averia(fd, db, cfg, id_usuario, params);
@@ -470,6 +587,9 @@ static void *hilo_cliente(void *arg) {
 #endif
 }
 
+/* ------------------------------------------------------------------ */
+/* Hilo principal del servidor (accept loop)                           */
+/* ------------------------------------------------------------------ */
 #ifdef _WIN32
 static DWORD WINAPI hilo_servidor(void *arg) {
 #else
