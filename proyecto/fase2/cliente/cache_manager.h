@@ -3,21 +3,21 @@
 #include <string>
 #include <vector>
 #include <chrono>
-
+using namespace std;
 
 struct EstacionCache {
     int    id;
-    std::string codigo;      
-    std::string nombre;     
+    string codigo;      
+    string nombre;     
     int    total_vehiculos;
     int    disponibles;
 };
 
 struct VehiculoCache {
     int    id;
-    std::string matricula;
+    string matricula;
     // "libre", "en_uso", "averiado", "reservado"
-    std::string estado;      
+    string estado;      
     int    id_estacion;
     // true si es el vehiculo activo del usuario
     bool   es_mio;           
@@ -33,9 +33,9 @@ public:
 
     bool estacionesValidas() const;
 
-    void actualizarEstaciones(const std::vector<EstacionCache>& lista);
+    void actualizarEstaciones(const vector<EstacionCache>& lista);
 
-    const std::vector<EstacionCache>& getEstaciones() const;
+    const vector<EstacionCache>& getEstaciones() const;
 
     void invalidarEstaciones();
 
@@ -43,28 +43,28 @@ public:
     bool vehiculosValidos(int id_estacion) const;
 
     void actualizarVehiculos(int id_estacion,
-                             const std::vector<VehiculoCache>& lista);
+                             const vector<VehiculoCache>& lista);
 
-    std::vector<VehiculoCache> getVehiculos(int id_estacion) const;
+    vector<VehiculoCache> getVehiculos(int id_estacion) const;
 
     void invalidarVehiculos(int id_estacion);
 
     void invalidarTodo();
 
 private:
-    using Reloj    = std::chrono::steady_clock;
-    using Instante = std::chrono::time_point<Reloj>;
+    using Reloj    = chrono::steady_clock;
+    using Instante = chrono::time_point<Reloj>;
 
-    std::vector<EstacionCache> estaciones_;
+    vector<EstacionCache> estaciones_;
     Instante                   ts_estaciones_;
     bool                       est_cargadas_ = false;
 
     struct EntradaVehiculos {
         int                       id_estacion;
-        std::vector<VehiculoCache> vehiculos;
+        vector<VehiculoCache> vehiculos;
         Instante                   timestamp;
     };
-    std::vector<EntradaVehiculos> cache_vehiculos_;
+    vector<EntradaVehiculos> cache_vehiculos_;
 
     bool haExpirado(const Instante& ts) const;
     EntradaVehiculos* buscarEntrada(int id_estacion);
