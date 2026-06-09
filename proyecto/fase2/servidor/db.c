@@ -543,6 +543,15 @@ int cancelar_reservas_vehiculo(sqlite3 *db, int id_vehiculo){
     return sqlite3_changes(db);
 }
 
+/* Marca como 'expirada' todas las reservas activas con más de 30 minutos */
+void expirar_reservas_caducadas(sqlite3 *db){
+    sqlite3_exec(db,
+        "UPDATE Reserva SET estado='expirada' "
+        "WHERE estado='activa' "
+        "  AND (strftime('%s','now') - strftime('%s', hora_inicio)) >= 1800;",
+        NULL, NULL, NULL);
+}
+
 /* ------------------------------------------------------------------ *
  * NUEVA función: comprueba si un vehículo tiene reserva activa de    *
  * otro usuario distinto. Devuelve el id_usuario del reservante o 0.  *
@@ -550,9 +559,12 @@ int cancelar_reservas_vehiculo(sqlite3 *db, int id_vehiculo){
 int reserva_activa_vehiculo(sqlite3 *db, int id_vehiculo){
     sqlite3_stmt *stmt;
     int usuario_reservante = 0;
+    /* Solo se considera activa si lleva menos de 30 minutos */
     sqlite3_prepare_v2(db,
         "SELECT usuario_id FROM Reserva "
-        "WHERE vehiculo_id=? AND estado='activa' LIMIT 1;",
+        "WHERE vehiculo_id=? AND estado='activa' "
+        "  AND (strftime('%s','now') - strftime('%s', hora_inicio)) < 1800 "
+        "LIMIT 1;",
         -1, &stmt, NULL);
     sqlite3_bind_int(stmt, 1, id_vehiculo);
     if(sqlite3_step(stmt) == SQLITE_ROW)

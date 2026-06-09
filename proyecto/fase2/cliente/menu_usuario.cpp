@@ -33,7 +33,8 @@ static VehiculoCache parseVehiculo(const string& linea, int id_vehiculo_activo) 
     VehiculoCache v{};
     if (f.size() >= 3) {
         v.id          = stoi(f[0]);
-        v.estado      = f[1];
+        // Normalizar estado: la BD usa "en_uso" pero el minimapa espera "en uso"
+        v.estado      = (f[1] == "en_uso") ? "en uso" : f[1];
         v.matricula   = "";
         v.id_estacion = 0;
         v.es_mio      = (v.id == id_vehiculo_activo);
@@ -51,7 +52,24 @@ MenuUsuario::MenuUsuario(Cliente& cli, int id_usuario,
       id_trayecto_activo_(-1),
       cache_(make_unique<CacheManager>()),
       id_vehiculo_reservado_(-1)
-{}
+{
+    /* Recuperar trayecto activo del servidor al iniciar sesion.
+     * El historial devuelve "en curso" en el campo fin si el trayecto
+     * sigue abierto (fin = NULL en la BD). */
+    cli_.enviarComando("HISTORIAL");
+    vector<string> hist = cli_.leerLista();
+    for (const auto& l : hist) {
+        if (l.empty()) continue;
+        auto f = split(l, '|');
+        if (f.size() >= 6 && (f[5] == "en curso" || f[5].empty())) {
+            try {
+                id_trayecto_activo_ = stoi(f[0]);
+                id_vehiculo_activo_ = stoi(f[1]);
+            } catch (...) {}
+            break;
+        }
+    }
+}
 
 MenuUsuario::~MenuUsuario() = default;
 

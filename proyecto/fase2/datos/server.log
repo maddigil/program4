@@ -50,3 +50,10 @@
 [2026-06-08 16:17:25] TRAYECTO iniciado usuario 25 vehiculo 5 trayecto 2
 [2026-06-08 16:17:35] TRAYECTO finalizado usuario 25 trayecto 2 dist 10.0km
 [2026-06-08 20:53:13] RESERVA usuario 25 vehiculo 2
+[2026-06-08 21:08:27] RESERVA usuario 25 vehiculo 3
+[2026-06-09 17:26:26] TRAYECTO iniciado usuario 25 vehiculo 3 trayecto 3
+[2026-06-09 17:26:54] TRAYECTO finalizado usuario 25 trayecto 3 dist 15.0km destino estacion 3 (DG)
+[2026-06-09 17:53:12] LOGIN cliente usuario_id 25
+[2026-06-09 17:53:32] RESERVA usuario 25 vehiculo 3
+[2026-06-09 17:58:25] TRAYECTO iniciado usuario 25 vehiculo 3 trayecto 4
+[2026-06-09 17:58:45] TRAYECTO finalizado usuario 25 trayecto 4 dist 15.0km destino estacion 1 (Z)

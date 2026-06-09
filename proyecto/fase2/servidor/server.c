@@ -3,6 +3,9 @@
 #include "logic.h"
 #include "protocolo.h"
 
+/* Forward declaration para expirar reservas con más de 30 min */
+void expirar_reservas_caducadas(sqlite3 *db);
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -79,11 +82,13 @@ static void cmd_listar_estaciones(int fd, sqlite3 *db) {
 /* VEH_ESTACION                                                         */
 /* ------------------------------------------------------------------ */
 static void cmd_vehiculos_estacion(int fd, sqlite3 *db, int id_estacion) {
+    /* Expirar reservas caducadas antes de mostrar estados */
     sqlite3_stmt *stmt;
+    expirar_reservas_caducadas(db);
     const char *sql =
-        "SELECT idvehiculo, estado, bateria "
-        "FROM Vehiculo WHERE ubicacionestacion = ? "
-        "ORDER BY idvehiculo;";
+        "SELECT id_vehiculo, estado, bateria "
+        "FROM Vehiculo WHERE ubicacion_estacion = ? "
+        "ORDER BY id_vehiculo;";
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         net_error(fd, "Error interno al listar vehiculos");
@@ -188,6 +193,8 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
 /* ------------------------------------------------------------------ */
 static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
                           int id_usuario, int id_vehiculo) {
+    /* Expirar reservas caducadas para que el vehiculo quede libre si procede */
+    expirar_reservas_caducadas(db);
     Usuario u;
     if (!buscar_usuario_por_id(db, id_usuario, &u)) {
         net_error(fd, "Usuario no encontrado");
@@ -378,7 +385,7 @@ static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
     char nombre_est[100] = "destino";
     sqlite3_stmt *nom;
     sqlite3_prepare_v2(db,
-        "SELECT nombre FROM Estacion WHERE id_estacion = ?;",
+        "SELECT abreviacion FROM Estacion WHERE id_estacion = ?;",
         -1, &nom, NULL);
     sqlite3_bind_int(nom, 1, id_est_destino);
     if (sqlite3_step(nom) == SQLITE_ROW) {
@@ -449,7 +456,7 @@ static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db,
         "SELECT t.id_trayecto, t.vehiculo_id, "
-        "       eo.nombre, ed.nombre, "
+        "       eo.abreviacion, ed.abreviacion, "
         "       t.inicio, t.fin, t.distancia "
         "FROM Trayecto t "
         "LEFT JOIN Estacion eo ON t.estacion_origen  = eo.id_estacion "
@@ -529,7 +536,12 @@ static void *hilo_cliente(void *arg) {
         pthread_mutex_lock(mx);
 
         if (strcmp(cmd, CMD_LOGIN) == 0) {
-            cmd_login(fd, db, params, &id_usuario);
+            if (cmd_login(fd, db, params, &id_usuario)) {
+                char logmsg[128];
+                snprintf(logmsg, sizeof(logmsg),
+                         "LOGIN cliente usuario_id %d", id_usuario);
+                log_escribir(cfg, logmsg);
+            }
 
         } else if (id_usuario < 0) {
             net_error(fd, "Primero debes hacer LOGIN");
@@ -568,6 +580,12 @@ static void *hilo_cliente(void *arg) {
 
         } else if (strcmp(cmd, CMD_SALIR) == 0) {
             net_ok(fd, "Hasta luego");
+            if (id_usuario >= 0) {
+                char logmsg[128];
+                snprintf(logmsg, sizeof(logmsg),
+                         "SALIR cliente usuario_id %d", id_usuario);
+                log_escribir(cfg, logmsg);
+            }
             pthread_mutex_unlock(mx);
             break;
 
