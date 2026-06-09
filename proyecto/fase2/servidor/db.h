@@ -4,9 +4,7 @@
 #include "sqlite3.h"
 #include <stddef.h>
 
-/* ------------------------------------------------------------------ */
-/* Estructuras de datos                                                 */
-/* ------------------------------------------------------------------ */
+
 
 typedef struct {
     int   id_vehiculo;
@@ -45,16 +43,14 @@ typedef struct {
     int    id_trayecto;
     int    usuario_id;
     int    vehiculo_id;
-    int    estacion_origen;    /* NEW: estación donde se recogió el vehículo */
-    int    estacion_destino;   /* NEW: estación donde se deja (0 = en curso) */
+    int    estacion_origen;    
+    int    estacion_destino;  
     char   inicio[32];
     char   fin[32];
     double distancia;
 } Trayecto;
 
-/* ------------------------------------------------------------------ */
-/* API de base de datos                                                 */
-/* ------------------------------------------------------------------ */
+
 
 sqlite3 *abrir_baseDatos(const char *ruta);
 void     cerrar_baseDatos(sqlite3 *db);
@@ -105,5 +101,9 @@ int insertar_trayecto(sqlite3 *db, const Trayecto *t);
 void mapa_grande(sqlite3 *db);
 void mapa_pequenyo(sqlite3 *db);
 void db_estadisticas(sqlite3 *db);
+
+int capacidad_maxima_estacion(int id_estacion);
+int vehiculos_en_estacion(sqlite3 *db, int id_estacion);
+int estacion_llena(sqlite3 *db, int id_estacion);
 
 #endif /* DB_H */

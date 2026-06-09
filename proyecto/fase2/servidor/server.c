@@ -3,7 +3,6 @@
 #include "logic.h"
 #include "protocolo.h"
 
-/* Forward declaration para expirar reservas con más de 30 min */
 void expirar_reservas_caducadas(sqlite3 *db);
 
 #include <stdio.h>
@@ -42,9 +41,7 @@ static void net_error(int fd, const char *msg) {
     net_enviar(fd, buf);
 }
 
-/* ------------------------------------------------------------------ */
-/* LISTAR_EST                                                           */
-/* ------------------------------------------------------------------ */
+
 static void cmd_listar_estaciones(int fd, sqlite3 *db) {
     sqlite3_stmt *stmt;
     const char *sql =
@@ -80,9 +77,7 @@ static void cmd_listar_estaciones(int fd, sqlite3 *db) {
     sqlite3_finalize(stmt);
 }
 
-/* ------------------------------------------------------------------ */
-/* VEH_ESTACION                                                         */
-/* ------------------------------------------------------------------ */
+
 static void cmd_vehiculos_estacion(int fd, sqlite3 *db, int id_estacion) {
     /* Expirar reservas caducadas antes de mostrar estados */
     sqlite3_stmt *stmt;
@@ -123,9 +118,7 @@ static void cmd_vehiculos_estacion(int fd, sqlite3 *db, int id_estacion) {
     net_enviar(fd, RESP_FIN);
     sqlite3_finalize(stmt);
 }
-/* ------------------------------------------------------------------ */
-/* LISTAR_VEH                                                           */
-/* ------------------------------------------------------------------ */
+
 static void cmd_listar_vehiculos(int fd, sqlite3 *db) {
     sqlite3_stmt *stmt;
     const char *sql =
@@ -153,9 +146,6 @@ static void cmd_listar_vehiculos(int fd, sqlite3 *db) {
     sqlite3_finalize(stmt);
 }
 
-/* ------------------------------------------------------------------ */
-/* LOGIN                                                                */
-/* ------------------------------------------------------------------ */
 static int cmd_login(int fd, sqlite3 *db, const char *params,
                      int *id_usuario_out) {
     char nombre[100] = {0}, clave[100] = {0};
@@ -188,14 +178,9 @@ static int cmd_login(int fd, sqlite3 *db, const char *params,
     return 1;
 }
 
-/* ------------------------------------------------------------------ */
-/* RESERVAR                                                             */
-/* Comprueba que el vehículo no tenga ya una reserva activa de otro    */
-/* usuario antes de crear una nueva.                                   */
-/* ------------------------------------------------------------------ */
+
 static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
                           int id_usuario, int id_vehiculo) {
-    /* Expirar reservas caducadas para que el vehiculo quede libre si procede */
     expirar_reservas_caducadas(db);
     Usuario u;
     if (!buscar_usuario_por_id(db, id_usuario, &u)) {
@@ -219,13 +204,11 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* Comprobar si ya existe reserva activa de OTRO usuario */
     int reservante = reserva_activa_vehiculo(db, id_vehiculo);
     if (reservante != 0 && reservante != id_usuario) {
         net_error(fd, "Ese vehiculo ya tiene una reserva activa de otro usuario");
         return;
     }
-    /* Si ya la tenía el mismo usuario, no crear duplicado */
     if (reservante == id_usuario) {
         net_ok(fd, "Ya tienes una reserva activa para ese vehiculo");
         return;
@@ -256,11 +239,7 @@ static void cmd_reservar(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
-/* ------------------------------------------------------------------ */
-/* USAR_VEH                                                             */
-/* Al iniciar el trayecto se cancela cualquier reserva pendiente sobre  */
-/* este vehículo (la propia del usuario u otras que pudieran existir). */
-/* ------------------------------------------------------------------ */
+
 static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
                                int id_usuario, int id_vehiculo) {
     Usuario u;
@@ -283,7 +262,6 @@ static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* Cancelar reservas activas sobre este vehículo (incluida la del propio usuario) */
     cancelar_reservas_vehiculo(db, id_vehiculo);
 
     char ahora[32];
@@ -319,13 +297,7 @@ static void cmd_usar_vehiculo(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
-/* ------------------------------------------------------------------ */
-/* FIN_TRAYECTO  id_trayecto distancia id_estacion_destino             */
-/*                                                                      */
-/* CAMBIO CLAVE: ahora el cliente envía también la estación de destino  */
-/* y el servidor actualiza ubicacion_estacion del vehículo para que    */
-/* los mapas reflejen correctamente dónde está cada vehículo.          */
-/* ------------------------------------------------------------------ */
+
 static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
                               int id_usuario, int id_trayecto,
                               float distancia, int id_est_destino) {
@@ -348,11 +320,23 @@ static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
         net_error(fd, "Estacion de destino no encontrada");
         return;
     }
+    if (estacion_llena(db, id_est_destino))
+    {
+    char msg[128];
+
+    snprintf(
+        msg,
+        sizeof(msg),
+        "La estacion %d esta completa. No puedes dejar mas vehiculos.",
+        id_est_destino);
+
+    net_error(fd, msg);
+    return;
+    }
 
     char ahora[32];
     fecha_ahora(ahora, sizeof(ahora));
 
-    /* Actualizar el trayecto con fin, distancia y estación destino */
     sqlite3_stmt *s;
     sqlite3_prepare_v2(db,
         "UPDATE Trayecto "
@@ -373,17 +357,14 @@ static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
         return;
     }
 
-    /* Obtener el vehículo que usaba este usuario */
     Usuario u;
     buscar_usuario_por_id(db, id_usuario, &u);
     int id_veh = u.vehiculo_activo;
 
-    /* Mover el vehículo a la estación de destino y ponerlo disponible */
     actualizar_ubicacion_vehiculo(db, id_veh, id_est_destino);
     actualizar_estado(db, id_veh, "disponible");
     actualizar_vehiculoActivo(db, id_usuario, 0);
 
-    /* Obtener nombre de la estación destino para el mensaje */
     char nombre_est[100] = "destino";
     sqlite3_stmt *nom;
     sqlite3_prepare_v2(db,
@@ -409,9 +390,7 @@ static void cmd_fin_trayecto(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, resp);
 }
 
-/* ------------------------------------------------------------------ */
-/* REPORTAR_AV                                                          */
-/* ------------------------------------------------------------------ */
+
 static void cmd_reportar_averia(int fd, sqlite3 *db, const Config *cfg,
                                  int id_usuario, const char *params) {
     int id_veh = 0;
@@ -450,10 +429,7 @@ static void cmd_reportar_averia(int fd, sqlite3 *db, const Config *cfg,
     net_ok(fd, "Averia registrada. El vehiculo queda bloqueado hasta su reparacion.");
 }
 
-/* ------------------------------------------------------------------ */
-/* HISTORIAL                                                            */
-/* Ahora incluye estación de origen y destino                          */
-/* ------------------------------------------------------------------ */
+
 static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db,
@@ -492,9 +468,7 @@ static void cmd_historial(int fd, sqlite3 *db, int id_usuario) {
     sqlite3_finalize(stmt);
 }
 
-/* ------------------------------------------------------------------ */
-/* Hilo de atención por cliente                                         */
-/* ------------------------------------------------------------------ */
+
 typedef struct {
     int              fd;
     sqlite3         *db;
@@ -607,9 +581,7 @@ static void *hilo_cliente(void *arg) {
 #endif
 }
 
-/* ------------------------------------------------------------------ */
-/* Hilo principal del servidor (accept loop)                           */
-/* ------------------------------------------------------------------ */
+
 #ifdef _WIN32
 static DWORD WINAPI hilo_servidor(void *arg) {
 #else

@@ -736,3 +736,67 @@ void db_estadisticas(sqlite3 *db){
     sqlite3_finalize(s);
     printf("\n");
 }
+
+int capacidad_maxima_estacion(int id_estacion)
+{
+    static const int capacidad[] = {
+        0,   /* 0 no existe */
+        14,  /* 1 */
+        12,  /* 2 */
+        11,  /* 3 */
+        9,   /* 4 */
+        13,  /* 5 */
+        9,   /* 6 */
+        11,  /* 7 */
+        8,   /* 8 */
+        12,  /* 9 */
+        7,   /* 10 */
+        11,  /* 11 */
+        9,   /* 12 */
+        8,   /* 13 */
+        10,  /* 14 */
+        7,   /* 15 */
+        9,   /* 16 */
+        11,  /* 17 */
+        12,  /* 18 */
+        8    /* 19 */
+    };
+
+    if(id_estacion < 1 || id_estacion > 19)
+        return 0;
+
+    return capacidad[id_estacion];
+}
+
+int vehiculos_en_estacion(sqlite3 *db, int id_estacion)
+{
+    sqlite3_stmt *stmt;
+
+    sqlite3_prepare_v2(
+        db,
+        "SELECT COUNT(*) "
+        "FROM Vehiculo "
+        "WHERE ubicacion_estacion=?;",
+        -1,
+        &stmt,
+        NULL);
+
+    sqlite3_bind_int(stmt, 1, id_estacion);
+
+    int total = 0;
+
+    if(sqlite3_step(stmt) == SQLITE_ROW)
+        total = sqlite3_column_int(stmt, 0);
+
+    sqlite3_finalize(stmt);
+
+    return total;
+}
+
+int estacion_llena(sqlite3 *db, int id_estacion)
+{
+    int capacidad = capacidad_maxima_estacion(id_estacion);
+    int ocupacion = vehiculos_en_estacion(db, id_estacion);
+
+    return ocupacion >= capacidad;
+}

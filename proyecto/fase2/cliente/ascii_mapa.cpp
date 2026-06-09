@@ -145,17 +145,14 @@ void dibujar_minimapa(const string &nombre_estacion,
         if ((int)s->size() > ancho) ancho = (int)s->size();
     if (ancho_vehiculos > ancho) ancho = ancho_vehiculos;
 
-    /* --- Helpers de impresion --- */
     auto borde = [&](char c){ cout << " +" << string(ancho, c) << "+\n"; };
 
-    // Imprime una linea con bordes | y relleno a la derecha
     auto linea_izq = [&](const string &texto) {
         int pad = ancho - (int)texto.size();
         if (pad < 0) pad = 0;
         cout << " |" << texto << string(pad, ' ') << "|\n";
     };
 
-    // Imprime texto centrado entre bordes |
     auto linea_centro = [&](const string &texto) {
         int pad_total = ancho - (int)texto.size();
         int pad_l = pad_total / 2;
@@ -166,7 +163,6 @@ void dibujar_minimapa(const string &nombre_estacion,
              << string(pad_r, ' ') << "|\n";
     };
 
-    /* --- Dibujar marco --- */
     cout << "\n";
     borde('=');
     linea_centro(titulo);

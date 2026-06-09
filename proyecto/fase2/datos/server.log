@@ -59,3 +59,6 @@
 [2026-06-09 17:58:45] TRAYECTO finalizado usuario 25 trayecto 4 dist 15.0km destino estacion 1 (Z)
 [2026-06-09 18:17:35] LOGIN cliente usuario_id 25
 [2026-06-09 18:18:42] SALIR cliente usuario_id 25
+[2026-06-09 19:32:25] LOGIN cliente usuario_id 25
+[2026-06-09 19:32:58] TRAYECTO iniciado usuario 25 vehiculo 5 trayecto 5
+[2026-06-09 19:34:31] TRAYECTO finalizado usuario 25 trayecto 5 dist 2.0km destino estacion 1 (Z)
