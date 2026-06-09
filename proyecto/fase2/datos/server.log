@@ -57,3 +57,5 @@
 [2026-06-09 17:53:32] RESERVA usuario 25 vehiculo 3
 [2026-06-09 17:58:25] TRAYECTO iniciado usuario 25 vehiculo 3 trayecto 4
 [2026-06-09 17:58:45] TRAYECTO finalizado usuario 25 trayecto 4 dist 15.0km destino estacion 1 (Z)
+[2026-06-09 18:17:35] LOGIN cliente usuario_id 25
+[2026-06-09 18:18:42] SALIR cliente usuario_id 25

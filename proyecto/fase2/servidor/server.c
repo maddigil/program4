@@ -49,11 +49,13 @@ static void cmd_listar_estaciones(int fd, sqlite3 *db) {
     sqlite3_stmt *stmt;
     const char *sql =
         "SELECT e.id_estacion, e.abreviacion, e.nombre, e.plazas, "
+        "       COUNT(v.id_vehiculo) AS total_vehiculos, "
         "       COUNT(CASE WHEN v.estado='disponible' THEN 1 END) AS disponibles "
         "FROM Estacion e "
         "LEFT JOIN Vehiculo v ON e.id_estacion = v.ubicacion_estacion "
         "GROUP BY e.id_estacion "
         "ORDER BY e.id_estacion;";
+
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         net_error(fd, "Error interno al listar estaciones");
